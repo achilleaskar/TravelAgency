@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:TravelAgency.Desktop.Views"
         xmlns:local="clr-namespace:TravelAgency.Desktop"
         mc:Ignorable="d"
         Title="Travel Agency"
@@ -33,22 +34,31 @@
 
         <TabControl>
             <TabItem Header="Dashboard">
-                <local:DashboardView />
+                <views:DashboardView />
             </TabItem>
+
+            <TabItem Header="Room Types">
+                <views:RoomTypesView />
+            </TabItem>
+
             <TabItem Header="Hotels">
-                <local:HotelsView />
+                <views:HotelsView />
             </TabItem>
+
             <TabItem Header="Allotments">
-                <local:AllotmentsView />
+                <views:AllotmentsView />
             </TabItem>
+
             <TabItem Header="Reservations">
-                <local:ReservationsView />
+                <views:ReservationsView />
             </TabItem>
+
             <TabItem Header="Customers">
-                <local:CustomersView />
+                <views:CustomersView />
             </TabItem>
+
             <TabItem Header="Plan">
-                <local:PlanView />
+                <views:PlanView />
             </TabItem>
         </TabControl>
     </DockPanel>

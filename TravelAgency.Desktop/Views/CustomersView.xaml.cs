@@ -4,12 +4,12 @@ using TravelAgency.Desktop.ViewModels;
 
 namespace TravelAgency.Desktop.Views
 {
-    public partial class HotelsView : UserControl
+    public partial class CustomersView : UserControl
     {
-        public HotelsView()
+        public CustomersView()
         {
             InitializeComponent();
-            DataContext = App.HostRef!.Services.GetRequiredService<HotelsViewModel>();
+            DataContext = App.HostRef!.Services.GetRequiredService<CustomersViewModel>();
         }
     }
 }

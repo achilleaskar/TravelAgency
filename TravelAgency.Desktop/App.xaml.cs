@@ -27,7 +27,7 @@ public partial class App : Application
                 services.AddDbContext<TravelAgencyDbContext>(opt =>
                     opt.UseMySql(cs, ServerVersion.AutoDetect(cs)));
 
-                // Services
+                // Services already here...
                 services.AddScoped<AllotmentService>();
                 services.AddScoped<ReservationService>();
                 services.AddScoped<AlertService>();
@@ -35,6 +35,10 @@ public partial class App : Application
                 // ViewModels
                 services.AddSingleton<MainViewModel>();
                 services.AddTransient<PlanViewModel>();
+                services.AddTransient<RoomTypesViewModel>();
+                services.AddTransient<HotelsViewModel>();
+                services.AddTransient<CustomersViewModel>();
+
             })
             .Build();
 
