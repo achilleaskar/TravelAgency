@@ -1,9 +1,8 @@
 ﻿<Application x:Class="TravelAgency.Desktop.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:TravelAgency.Desktop"
-             StartupUri="MainWindow.xaml">
+             xmlns:conv="clr-namespace:TravelAgency.Desktop.Converters">
     <Application.Resources>
-         
+        <conv:SeverityToBrushConverter x:Key="SeverityToBrush" />
     </Application.Resources>
 </Application>

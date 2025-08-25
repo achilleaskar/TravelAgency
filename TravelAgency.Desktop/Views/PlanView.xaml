@@ -16,7 +16,6 @@
         <StackPanel DockPanel.Dock="Top"
                     Orientation="Horizontal"
                     Margin="8">
-            <!-- local styles to simulate spacing -->
             <StackPanel.Resources>
                 <Style TargetType="Control">
                     <Setter Property="Margin"
@@ -43,7 +42,6 @@
                     Orientation="Horizontal"
                     Margin="8">
             <StackPanel.Resources>
-                <!-- space between legend groups -->
                 <Style TargetType="StackPanel">
                     <Setter Property="Margin"
                             Value="0,0,12,0" />
@@ -57,12 +55,6 @@
                             Value="16" />
                     <Setter Property="Margin"
                             Value="0,0,4,0" />
-                    <Setter Property="VerticalAlignment"
-                            Value="Center" />
-                </Style>
-                <Style TargetType="TextBlock">
-                    <Setter Property="VerticalAlignment"
-                            Value="Center" />
                 </Style>
             </StackPanel.Resources>
 

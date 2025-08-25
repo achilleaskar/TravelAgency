@@ -20,9 +20,8 @@
                                 Padding="6"
                                 CornerRadius="6">
                             <Border.Background>
-                                <MultiBinding Converter="{StaticResource SeverityToBrush}">
-                                    <Binding Path="Severity" />
-                                </MultiBinding>
+                                <Binding Path="Severity"
+                                         Converter="{StaticResource SeverityToBrush}" />
                             </Border.Background>
                             <TextBlock Foreground="White"
                                        Text="{Binding Message}" />

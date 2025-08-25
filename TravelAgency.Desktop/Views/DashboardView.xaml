@@ -12,7 +12,13 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <StackPanel Orientation="Horizontal"
-                    Spacing="8">
+                    Margin="0,0,0,8">
+            <StackPanel.Resources>
+                <Style TargetType="Control">
+                    <Setter Property="Margin"
+                            Value="0,0,8,0" />
+                </Style>
+            </StackPanel.Resources>
             <DatePicker SelectedDate="{Binding FilterStart}" />
             <DatePicker SelectedDate="{Binding FilterEnd}" />
             <Button Content="Refresh"
