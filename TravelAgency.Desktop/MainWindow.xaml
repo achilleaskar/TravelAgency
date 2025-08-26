@@ -7,58 +7,34 @@
         xmlns:local="clr-namespace:TravelAgency.Desktop"
         mc:Ignorable="d"
         Title="Travel Agency"
+        Background="White"
         Width="1200"
         Height="800">
     <DockPanel>
-        <!-- Alerts bar -->
-        <Border DockPanel.Dock="Top"
-                Background="#222"
-                Padding="8">
-            <ItemsControl ItemsSource="{Binding Alerts}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Margin="4"
-                                Padding="6"
-                                CornerRadius="6">
-                            <Border.Background>
-                                <Binding Path="Severity"
-                                         Converter="{StaticResource SeverityToBrush}" />
-                            </Border.Background>
-                            <TextBlock Foreground="White"
-                                       Text="{Binding Message}" />
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </Border>
-
+        <!-- Alerts bar stays as is -->
         <TabControl>
             <TabItem Header="Dashboard">
                 <views:DashboardView />
             </TabItem>
 
-            <TabItem Header="Room Types">
-                <views:RoomTypesView />
-            </TabItem>
-
-            <TabItem Header="Hotels">
-                <views:HotelsView />
-            </TabItem>
-
-            <TabItem Header="Allotments">
-                <views:AllotmentsView />
-            </TabItem>
-
-            <TabItem Header="Reservations">
-                <views:ReservationsView />
-            </TabItem>
-
-            <TabItem Header="Customers">
-                <views:CustomersView />
-            </TabItem>
-
             <TabItem Header="Plan">
                 <views:PlanView />
+            </TabItem>
+
+            <!-- New: one parent tab for all entity management screens -->
+            <TabItem Header="Manage">
+                <TabControl>
+                    <TabItem Header="Room Types">
+                        <views:RoomTypesView />
+                    </TabItem>
+                    <TabItem Header="Hotels">
+                        <views:HotelsView />
+                    </TabItem>
+                    <TabItem Header="Customers">
+                        <views:CustomersView />
+                    </TabItem>
+                    <!-- later: Allotments, Reservations, etc. -->
+                </TabControl>
             </TabItem>
         </TabControl>
     </DockPanel>

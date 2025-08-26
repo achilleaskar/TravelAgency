@@ -2,9 +2,6 @@
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Controls.Primitives;
 using TravelAgency.Data;
 using TravelAgency.Domain.Entities;
 
@@ -14,33 +11,30 @@ namespace TravelAgency.Desktop.ViewModels
     {
         private readonly TravelAgencyDbContext _db;
 
-        public ObservableCollection<Hotel> Hotels { get; } = new();
+        public ObservableCollection<Hotel> Items { get; } = new();
         public ObservableCollection<City> Cities { get; } = new();
 
-        [ObservableProperty]
-        private Hotel? selected;
-        [ObservableProperty]
-        private string? searchText;
+        [ObservableProperty] private Hotel? selected;
+        [ObservableProperty] private string? searchText;
 
-        // Editor fields
-        [ObservableProperty]
-        private string? editName;
-        [ObservableProperty]
-        private City? editCity;
-        [ObservableProperty]
-        private string? editAddress;
-        [ObservableProperty]
-        private string? editPhone;
-        [ObservableProperty]
-        private string? editEmail;
+        [ObservableProperty] private bool isEditing;
+        [ObservableProperty] private string editorTitle = "Select a row and click Edit, or click Add New";
+        [ObservableProperty] private string editorHint = "Use the left list to select an item for editing.";
 
-        // Quick city add
-        [ObservableProperty]
-        private string? newCityName;
-        [ObservableProperty]
-        private string? newCityCountry = "GR";
+        [ObservableProperty] private string? editName;
+        [ObservableProperty] private City? editCity;
+        [ObservableProperty] private string? editAddress;
+        [ObservableProperty] private string? editPhone;
+        [ObservableProperty] private string? editEmail;
+
+        private bool _isNewMode;
+        private int? _editingId;
 
         public HotelsViewModel(TravelAgencyDbContext db) => _db = db;
+
+        public bool CanEdit => Selected != null && !IsEditing;
+        public bool CanDelete => Selected != null && !IsEditing;
+        partial void OnSelectedChanged(Hotel? value) { OnPropertyChanged(nameof(CanEdit)); OnPropertyChanged(nameof(CanDelete)); }
 
         [RelayCommand]
         private async Task LoadAsync()
@@ -48,49 +42,29 @@ namespace TravelAgency.Desktop.ViewModels
             Cities.Clear();
             foreach (var c in await _db.Cities.OrderBy(x => x.Name).ToListAsync()) Cities.Add(c);
 
-            Hotels.Clear();
+            Items.Clear();
             var q = _db.Hotels.Include(h => h.City).AsQueryable();
             if (!string.IsNullOrWhiteSpace(SearchText))
                 q = q.Where(h => h.Name.Contains(SearchText) || h.City!.Name.Contains(SearchText));
-            foreach (var h in await q.AsNoTracking().OrderBy(h => h.Name).ToListAsync()) Hotels.Add(h);
+            foreach (var h in await q.AsNoTracking().OrderBy(h => h.Name).ToListAsync()) Items.Add(h);
         }
 
         [RelayCommand]
-        private async Task AddCityAsync()
+        private void BeginNew()
         {
-            if (string.IsNullOrWhiteSpace(NewCityName) || string.IsNullOrWhiteSpace(NewCityCountry)) return;
-            if (!await _db.Cities.AnyAsync(x => x.Name == NewCityName && x.Country == NewCityCountry))
-            {
-                _db.Cities.Add(new City { Name = NewCityName!, Country = NewCityCountry! });
-                await _db.SaveChangesAsync();
-                await LoadAsync();
-                EditCity = Cities.FirstOrDefault(x => x.Name == NewCityName && x.Country == NewCityCountry);
-            }
-        }
-
-        partial void OnSelectedChanged(Hotel? value)
-        {
-            if (value == null)
-            {
-                EditName = EditAddress = EditPhone = EditEmail = null;
-                EditCity = null;
-            }
-            else
-            {
-                EditName = value.Name;
-                EditAddress = value.Address;
-                EditPhone = value.Phone;
-                EditEmail = value.Email;
-                EditCity = Cities.FirstOrDefault(c => c.Id == value.CityId);
-            }
+            _isNewMode = true; _editingId = null; IsEditing = true;
+            EditName = ""; EditAddress = ""; EditPhone = ""; EditEmail = ""; EditCity = Cities.FirstOrDefault();
+            EditorTitle = "Add New Hotel"; EditorHint = "Fill the fields and click Save.";
         }
 
         [RelayCommand]
-        private void New()
+        private void BeginEdit()
         {
-            Selected = null;
-            EditName = EditAddress = EditPhone = EditEmail = string.Empty;
-            EditCity = Cities.FirstOrDefault();
+            if (Selected == null) return;
+            _isNewMode = false; _editingId = Selected.Id; IsEditing = true;
+            EditName = Selected.Name; EditAddress = Selected.Address; EditPhone = Selected.Phone; EditEmail = Selected.Email;
+            EditCity = Cities.FirstOrDefault(c => c.Id == Selected.CityId);
+            EditorTitle = $"Edit Hotel #{Selected.Id}"; EditorHint = "Change values and click Save.";
         }
 
         [RelayCommand]
@@ -98,29 +72,27 @@ namespace TravelAgency.Desktop.ViewModels
         {
             if (string.IsNullOrWhiteSpace(EditName) || EditCity == null) return;
 
-            if (Selected == null)
+            if (_isNewMode)
             {
-                _db.Hotels.Add(new Hotel
-                {
-                    Name = EditName!.Trim(),
-                    CityId = EditCity.Id,
-                    Address = EditAddress,
-                    Phone = EditPhone,
-                    Email = EditEmail
-                });
+                _db.Hotels.Add(new Hotel { Name = EditName!.Trim(), CityId = EditCity.Id, Address = EditAddress, Phone = EditPhone, Email = EditEmail });
             }
-            else
+            else if (_editingId.HasValue)
             {
-                var h = await _db.Hotels.FirstAsync(x => x.Id == Selected.Id);
-                h.Name = EditName!.Trim();
-                h.CityId = EditCity.Id;
-                h.Address = EditAddress;
-                h.Phone = EditPhone;
-                h.Email = EditEmail;
+                var h = await _db.Hotels.FirstAsync(x => x.Id == _editingId.Value);
+                h.Name = EditName!.Trim(); h.CityId = EditCity.Id; h.Address = EditAddress; h.Phone = EditPhone; h.Email = EditEmail;
             }
 
             await _db.SaveChangesAsync();
+            IsEditing = false;
             await LoadAsync();
+        }
+
+        [RelayCommand]
+        private void Cancel()
+        {
+            IsEditing = false; _isNewMode = false; _editingId = null;
+            EditorTitle = "Select a row and click Edit, or click Add New";
+            EditorHint = "Use the left list to select an item for editing.";
         }
 
         [RelayCommand]

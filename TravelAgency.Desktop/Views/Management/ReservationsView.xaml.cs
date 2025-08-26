@@ -3,11 +3,11 @@
 namespace TravelAgency.Desktop.Views
 {
     /// <summary>
-    /// Interaction logic for DashboardView.xaml
+    /// Interaction logic for ReservationsView.xaml
     /// </summary>
-    public partial class DashboardView : UserControl
+    public partial class ReservationsView : UserControl
     {
-        public DashboardView()
+        public ReservationsView()
         {
             InitializeComponent();
         }

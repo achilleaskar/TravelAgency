@@ -1,8 +1,9 @@
-﻿<UserControl x:Class="TravelAgency.Desktop.Views.HotelsView"
+﻿<UserControl x:Class="TravelAgency.Desktop.Views.RoomTypesView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              Background="White"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <DockPanel>
+        <!-- Toolbar -->
         <StackPanel DockPanel.Dock="Top"
                     Orientation="Horizontal"
                     Margin="8">
@@ -15,7 +16,7 @@
                 </Style>
             </StackPanel.Resources>
 
-            <TextBox Width="220"
+            <TextBox Width="180"
                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
             <Button Content="Load"
                     Command="{Binding LoadCommand}" />
@@ -30,6 +31,7 @@
                     IsEnabled="{Binding CanDelete}" />
         </StackPanel>
 
+        <!-- Master–Detail -->
         <Grid Margin="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -37,33 +39,28 @@
                 <ColumnDefinition Width="2*" />
             </Grid.ColumnDefinitions>
 
+            <!-- Master (View/Delete) -->
             <DataGrid Grid.Column="0"
                       ItemsSource="{Binding Items}"
                       SelectedItem="{Binding Selected}"
                       IsReadOnly="True"
                       AutoGenerateColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Hotel"
-                                        Binding="{Binding Name}"
-                                        Width="220" />
-                    <DataGridTextColumn Header="City"
-                                        Binding="{Binding City.Name}"
-                                        Width="160" />
-                    <DataGridTextColumn Header="Address"
-                                        Binding="{Binding Address}"
-                                        Width="*" />
-                    <DataGridTextColumn Header="Phone"
-                                        Binding="{Binding Phone}"
+                    <DataGridTextColumn Header="Code"
+                                        Binding="{Binding Code}"
                                         Width="140" />
-                    <DataGridTextColumn Header="Email"
-                                        Binding="{Binding Email}"
-                                        Width="180" />
+                    <DataGridTextColumn Header="Name"
+                                        Binding="{Binding Name}"
+                                        Width="*" />
                 </DataGrid.Columns>
             </DataGrid>
 
+            <!-- Splitter -->
             <GridSplitter Grid.Column="1"
-                          Width="12" />
+                          Width="12"
+                          HorizontalAlignment="Stretch" />
 
+            <!-- Detail (Add/Edit form) -->
             <Border Grid.Column="2"
                     Padding="12"
                     BorderBrush="#DDD"
@@ -76,49 +73,20 @@
                                Margin="0,0,0,8" />
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,8">
-                        <TextBlock Text="Name"
+                        <TextBlock Text="Code"
                                    Width="80"
                                    VerticalAlignment="Center" />
-                        <TextBox Width="260"
-                                 Text="{Binding EditName}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="City"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <ComboBox Width="220"
-                                  ItemsSource="{Binding Cities}"
-                                  DisplayMemberPath="Name"
-                                  SelectedItem="{Binding EditCity}"
-                                  IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="Address"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <TextBox Width="300"
-                                 Text="{Binding EditAddress}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="Phone"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <TextBox Width="180"
-                                 Text="{Binding EditPhone}"
+                        <TextBox Width="220"
+                                 Text="{Binding EditCode, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding IsEditing}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,16">
-                        <TextBlock Text="Email"
+                        <TextBlock Text="Name"
                                    Width="80"
                                    VerticalAlignment="Center" />
-                        <TextBox Width="240"
-                                 Text="{Binding EditEmail}"
+                        <TextBox Width="300"
+                                 Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
                                  IsEnabled="{Binding IsEditing}" />
                     </StackPanel>
 

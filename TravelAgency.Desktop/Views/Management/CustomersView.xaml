@@ -1,7 +1,19 @@
-﻿<UserControl x:Class="TravelAgency.Desktop.Views.HotelsView"
+﻿<UserControl x:Class="TravelAgency.Desktop.Views.CustomersView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             Background="White"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="White">
+    <UserControl.Resources>
+        <Style x:Key="RightAligned"
+               TargetType="{x:Type TextBlock}">
+            <Setter Property="HorizontalAlignment"
+                    Value="Right" />
+            <Setter Property="TextAlignment"
+                    Value="Right" />
+            <Setter Property="Padding"
+                    Value="0,0,6,0" />
+        </Style>
+    </UserControl.Resources>
+
     <DockPanel>
         <StackPanel DockPanel.Dock="Top"
                     Orientation="Horizontal"
@@ -43,21 +55,19 @@
                       IsReadOnly="True"
                       AutoGenerateColumns="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Hotel"
+                    <DataGridTextColumn Header="Name"
                                         Binding="{Binding Name}"
                                         Width="220" />
-                    <DataGridTextColumn Header="City"
-                                        Binding="{Binding City.Name}"
-                                        Width="160" />
-                    <DataGridTextColumn Header="Address"
-                                        Binding="{Binding Address}"
-                                        Width="*" />
-                    <DataGridTextColumn Header="Phone"
-                                        Binding="{Binding Phone}"
-                                        Width="140" />
                     <DataGridTextColumn Header="Email"
                                         Binding="{Binding Email}"
-                                        Width="180" />
+                                        Width="220" />
+                    <DataGridTextColumn Header="Phone"
+                                        Binding="{Binding Phone}"
+                                        Width="160" />
+                    <DataGridTextColumn Header="Old Balance"
+                                        Binding="{Binding OldBalance, StringFormat={}{0:0.##}}"
+                                        Width="120"
+                                        ElementStyle="{StaticResource RightAligned}" />
                 </DataGrid.Columns>
             </DataGrid>
 
@@ -77,48 +87,37 @@
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,8">
                         <TextBlock Text="Name"
-                                   Width="80"
+                                   Width="100"
                                    VerticalAlignment="Center" />
-                        <TextBox Width="260"
+                        <TextBox Width="280"
                                  Text="{Binding EditName}"
                                  IsEnabled="{Binding IsEditing}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,8">
-                        <TextBlock Text="City"
-                                   Width="80"
+                        <TextBlock Text="Email"
+                                   Width="100"
                                    VerticalAlignment="Center" />
-                        <ComboBox Width="220"
-                                  ItemsSource="{Binding Cities}"
-                                  DisplayMemberPath="Name"
-                                  SelectedItem="{Binding EditCity}"
-                                  IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="Address"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <TextBox Width="300"
-                                 Text="{Binding EditAddress}"
+                        <TextBox Width="280"
+                                 Text="{Binding EditEmail}"
                                  IsEnabled="{Binding IsEditing}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,8">
                         <TextBlock Text="Phone"
-                                   Width="80"
+                                   Width="100"
                                    VerticalAlignment="Center" />
-                        <TextBox Width="180"
+                        <TextBox Width="200"
                                  Text="{Binding EditPhone}"
                                  IsEnabled="{Binding IsEditing}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal"
                                 Margin="0,0,0,16">
-                        <TextBlock Text="Email"
-                                   Width="80"
+                        <TextBlock Text="Old Balance"
+                                   Width="100"
                                    VerticalAlignment="Center" />
-                        <TextBox Width="240"
-                                 Text="{Binding EditEmail}"
+                        <TextBox Width="120"
+                                 Text="{Binding EditOldBalance}"
                                  IsEnabled="{Binding IsEditing}" />
                     </StackPanel>
 
