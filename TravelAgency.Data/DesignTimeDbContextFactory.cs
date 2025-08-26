@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
 
+
 namespace TravelAgency.Data;
 
 public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<TravelAgencyDbContext>

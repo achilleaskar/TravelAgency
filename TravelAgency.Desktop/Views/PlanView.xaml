@@ -60,7 +60,7 @@
 
             <StackPanel>
                 <Rectangle Fill="Green" />
-                <TextBlock Text="Free & Paid" />
+                <TextBlock Text="Free n Paid" />
             </StackPanel>
             <StackPanel>
                 <Rectangle Fill="Goldenrod" />

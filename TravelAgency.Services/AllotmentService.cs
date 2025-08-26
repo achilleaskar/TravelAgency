@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
+using System.Data;
 using TravelAgency.Data;
 using TravelAgency.Domain.Entities;
 using TravelAgency.Domain.Enums;
@@ -148,17 +149,16 @@ public class AlertService
             return false;
         });
     }
-}
     public async Task<List<AlertDto>> GetAlertsAsync(DateTime today)
     {
         var upcomingOption = await _db.Allotments
             .Where(a => a.OptionDueDate != null && a.OptionDueDate >= today && a.OptionDueDate <= today.AddDays(3))
-            .Select(a => new AlertDto(
+           .Select(a => new AlertDto(
                 $"Πληρωμή option για {a.Hotel!.Name} έως {a.OptionDueDate:dd/MM}",
                 a.OptionDueDate!.Value,
                 a.OptionDueDate!.Value <= today.AddDays(1) ? Severity.Danger : Severity.Warning,
-                Link: $"allotment:{a.Id}")
-            )
+                $"allotment:{a.Id}"
+            ))
             .ToListAsync();
 
         var upcomingDeposits = await _db.Reservations
@@ -167,7 +167,7 @@ public class AlertService
             .Select(r => new AlertDto(
                 $"Προκαταβολή για {r.Title} έως {r.DepositDueDate:dd/MM}", r.DepositDueDate!.Value,
                 r.DepositDueDate!.Value <= today.AddDays(1) ? Severity.Danger : Severity.Warning,
-                Link: $"reservation:{r.Id}"))
+                $"reservation:{r.Id}"))
             .ToListAsync();
 
         var upcomingBalances = await _db.Reservations
@@ -176,7 +176,7 @@ public class AlertService
             .Select(r => new AlertDto(
                 $"Εξόφληση για {r.Title} έως {r.BalanceDueDate:dd/MM}", r.BalanceDueDate!.Value,
                 r.BalanceDueDate!.Value <= today.AddDays(1) ? Severity.Danger : Severity.Warning,
-                Link: $"reservation:{r.Id}"))
+                $"reservation:{r.Id}"))
             .ToListAsync();
 
         return upcomingOption.Concat(upcomingDeposits).Concat(upcomingBalances)
