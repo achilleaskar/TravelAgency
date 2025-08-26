@@ -16,6 +16,7 @@ namespace TravelAgency.Desktop.ViewModels
 
         [ObservableProperty] private Hotel? selected;
         [ObservableProperty] private string? searchText;
+        [ObservableProperty] private string? editNotes;
 
         [ObservableProperty] private bool isEditing;
         [ObservableProperty] private string editorTitle = "Select a row and click Edit, or click Add New";
@@ -74,12 +75,12 @@ namespace TravelAgency.Desktop.ViewModels
 
             if (_isNewMode)
             {
-                _db.Hotels.Add(new Hotel { Name = EditName!.Trim(), CityId = EditCity.Id, Address = EditAddress, Phone = EditPhone, Email = EditEmail });
+                _db.Hotels.Add(new Hotel { Name = EditName!.Trim(), CityId = EditCity.Id, Address = EditAddress, Phone = EditPhone, Email = EditEmail, Notes = EditNotes });
             }
             else if (_editingId.HasValue)
             {
                 var h = await _db.Hotels.FirstAsync(x => x.Id == _editingId.Value);
-                h.Name = EditName!.Trim(); h.CityId = EditCity.Id; h.Address = EditAddress; h.Phone = EditPhone; h.Email = EditEmail;
+                h.Name = EditName!.Trim(); h.CityId = EditCity.Id; h.Address = EditAddress; h.Phone = EditPhone; h.Email = EditEmail; h.Notes = EditNotes;
             }
 
             await _db.SaveChangesAsync();

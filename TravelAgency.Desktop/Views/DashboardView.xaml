@@ -11,32 +11,59 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+
+        <!-- Filters -->
         <StackPanel Orientation="Horizontal"
                     Margin="0,0,0,8">
             <StackPanel.Resources>
                 <Style TargetType="Control">
                     <Setter Property="Margin"
                             Value="0,0,8,0" />
+                    <Setter Property="VerticalAlignment"
+                            Value="Center" />
                 </Style>
             </StackPanel.Resources>
-            <DatePicker SelectedDate="{Binding FilterStart}" />
-            <DatePicker SelectedDate="{Binding FilterEnd}" />
+
+            <ComboBox Width="220"
+                      ItemsSource="{Binding Customers}"
+                      DisplayMemberPath="Name"
+                      SelectedItem="{Binding SelectedCustomer}" />
+            <ComboBox Width="220"
+                      ItemsSource="{Binding Countries}"
+                      SelectedItem="{Binding SelectedCountry}" />
+            <ComboBox Width="220"
+                      ItemsSource="{Binding Hotels}"
+                      DisplayMemberPath="Name"
+                      SelectedItem="{Binding SelectedHotel}" />
+            <TextBox Width="220"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
             <Button Content="Refresh"
                     Command="{Binding RefreshCommand}" />
         </StackPanel>
+
+        <!-- Alerts grid -->
         <DataGrid Grid.Row="1"
                   ItemsSource="{Binding Alerts}"
                   AutoGenerateColumns="False">
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Ημερομηνία"
+                <DataGridTextColumn Header="Due"
                                     Binding="{Binding DueDate, StringFormat=dd/MM/yyyy}"
                                     Width="120" />
-                <DataGridTextColumn Header="Μήνυμα"
+                <DataGridTextColumn Header="Message"
                                     Binding="{Binding Message}"
                                     Width="*" />
-                <DataGridTextColumn Header="Σοβαρότητα"
+                <DataGridTextColumn Header="Severity"
                                     Binding="{Binding Severity}"
                                     Width="120" />
+                <DataGridTextColumn Header="Hotel"
+                                    Binding="{Binding HotelName}"
+                                    Width="160" />
+                <DataGridTextColumn Header="Country"
+                                    Binding="{Binding Country}"
+                                    Width="120" />
+                <DataGridTextColumn Header="Customer"
+                                    Binding="{Binding CustomerName}"
+                                    Width="160" />
             </DataGrid.Columns>
         </DataGrid>
     </Grid>

@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using TravelAgency.Data;
@@ -16,6 +17,7 @@ namespace TravelAgency.Desktop.ViewModels
 
         [ObservableProperty] private Customer? selected;
         [ObservableProperty] private string? searchText;
+        [ObservableProperty] private string? editNotes;
 
         [ObservableProperty] private bool isEditing;
         [ObservableProperty] private string editorTitle = "Select a row and click Edit, or click Add New";
@@ -76,7 +78,8 @@ namespace TravelAgency.Desktop.ViewModels
                     Name = EditName!.Trim(),
                     Email = string.IsNullOrWhiteSpace(EditEmail) ? null : EditEmail!.Trim(),
                     Phone = string.IsNullOrWhiteSpace(EditPhone) ? null : EditPhone!.Trim(),
-                    OldBalance = ob
+                    OldBalance = ob,
+                    Notes = EditNotes
                 });
             }
             else if (_editingId.HasValue)
@@ -86,6 +89,7 @@ namespace TravelAgency.Desktop.ViewModels
                 c.Email = string.IsNullOrWhiteSpace(EditEmail) ? null : EditEmail!.Trim();
                 c.Phone = string.IsNullOrWhiteSpace(EditPhone) ? null : EditPhone!.Trim();
                 c.OldBalance = ob;
+                c.Notes = EditNotes;
             }
 
             await _db.SaveChangesAsync();

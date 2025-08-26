@@ -14,6 +14,8 @@ public class TravelAgencyDbContext : DbContext
     public DbSet<Reservation> Reservations => Set<Reservation>();
     public DbSet<ReservationItem> ReservationItems => Set<ReservationItem>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<UpdateLog> UpdateLogs => Set<UpdateLog>();
+
 
     public TravelAgencyDbContext(DbContextOptions<TravelAgencyDbContext> options) : base(options)
     {
@@ -38,6 +40,76 @@ public class TravelAgencyDbContext : DbContext
 
         b.Entity<ReservationItem>().HasIndex(x => x.AllotmentRoomTypeId);
 
-        // decimal precision ensured via [Column(TypeName=...)]
+        // Map AuditableEntity properties for each derived type
+        b.Entity<Customer>().Property(x => x.Notes).HasMaxLength(2000);
+        b.Entity<Hotel>().Property(x => x.Notes).HasMaxLength(2000);
+        b.Entity<Allotment>().Property(x => x.Notes).HasMaxLength(2000);
+        b.Entity<Reservation>().Property(x => x.Notes).HasMaxLength(2000);
+
+        b.Entity<UpdateLog>().HasIndex(x => new { x.EntityType, x.EntityId, x.ChangedAt });
+
     }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var utcNow = DateTime.UtcNow;
+
+        // set CreatedAt/UpdatedAt
+        foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.Entity.CreatedAt = utcNow;
+                entry.Entity.UpdatedAt = utcNow;
+            }
+            else if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.UpdatedAt = utcNow;
+            }
+        }
+
+        // gather change logs
+        var logs = new List<UpdateLog>();
+        foreach (var entry in ChangeTracker.Entries())
+        {
+            if (entry.State != EntityState.Modified) continue;
+            if (entry.Entity is not AuditableEntity auditable) continue;
+
+            var entityType = entry.Entity.GetType().Name;
+            // Try to get an integer id property named "Id"
+            var idProp = entry.Property("Id");
+            var entityId = idProp?.CurrentValue is int i ? i : 0;
+
+            foreach (var prop in entry.Properties)
+            {
+                if (!prop.IsModified) continue;
+                if (prop.Metadata.Name is "UpdatedAt" or "CreatedAt") continue; // skip auto fields
+
+                var oldVal = prop.OriginalValue?.ToString();
+                var newVal = prop.CurrentValue?.ToString();
+                if (oldVal == newVal) continue;
+
+                logs.Add(new UpdateLog
+                {
+                    EntityType = entityType,
+                    EntityId = entityId,
+                    ChangedAt = utcNow,
+                    ChangedBy = null, // plug user later
+                    Field = prop.Metadata.Name,
+                    OldValue = oldVal,
+                    NewValue = newVal
+                });
+            }
+        }
+
+        var result = await base.SaveChangesAsync(cancellationToken);
+
+        if (logs.Count > 0)
+        {
+            UpdateLogs.AddRange(logs);
+            await base.SaveChangesAsync(cancellationToken);
+        }
+        return result;
+    }
+
 }

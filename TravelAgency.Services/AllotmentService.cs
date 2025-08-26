@@ -10,6 +10,7 @@ namespace TravelAgency.Services;
 public class AllotmentService
 {
     private readonly TravelAgencyDbContext _db;
+
     public AllotmentService(TravelAgencyDbContext db) => _db = db;
 
     public Task<List<Allotment>> GetUpcomingAsync(DateTime from, DateTime to, int? cityId = null)
@@ -51,6 +52,7 @@ public class AllotmentService
 public class ReservationService
 {
     private readonly TravelAgencyDbContext _db;
+
     public ReservationService(TravelAgencyDbContext db) => _db = db;
 
     public async Task<Reservation> CreateAsync(int customerId, string title, DateTime start, DateTime end,
@@ -79,12 +81,22 @@ public class ReservationService
     }
 }
 
-public record AlertDto(string Message, DateTime DueDate, Severity Severity, string? Link = null);
+public record AlertDto(
+    string Message,
+    DateTime DueDate,
+    Severity Severity,
+    string? Link = null,
+    string? HotelName = null,
+    string? Country = null,
+    string? CustomerName = null
+);
 
 public class AlertService
 {
     private readonly TravelAgencyDbContext _db;
+
     public AlertService(TravelAgencyDbContext db) => _db = db;
+
     public async Task<bool> ReserveRoomsAsync(int reservationId, int allotmentRoomTypeId, int qty, CancellationToken ct = default)
     {
         var strategy = _db.Database.CreateExecutionStrategy();
@@ -149,37 +161,88 @@ public class AlertService
             return false;
         });
     }
-    public async Task<List<AlertDto>> GetAlertsAsync(DateTime today)
+
+    public async Task<List<AlertDto>> GetAlertsAsync(
+    DateTime today,
+    int? hotelId = null,
+    string? country = null,
+    int? customerId = null,
+    string? search = null)
     {
-        var upcomingOption = await _db.Allotments
-            .Where(a => a.OptionDueDate != null && a.OptionDueDate >= today && a.OptionDueDate <= today.AddDays(3))
-           .Select(a => new AlertDto(
-                $"Πληρωμή option για {a.Hotel!.Name} έως {a.OptionDueDate:dd/MM}",
+        // Allotment option dues
+        var allotQ = _db.Allotments
+            .Include(a => a.Hotel)!.ThenInclude(h => h.City)
+            .Where(a => a.OptionDueDate != null &&
+                        a.OptionDueDate >= today &&
+                        a.OptionDueDate <= today.AddDays(3));
+
+        if (hotelId != null) allotQ = allotQ.Where(a => a.HotelId == hotelId);
+        if (!string.IsNullOrWhiteSpace(country)) allotQ = allotQ.Where(a => a.Hotel!.City!.Country == country);
+        if (!string.IsNullOrWhiteSpace(search))
+            allotQ = allotQ.Where(a =>
+                a.Hotel!.Name.Contains(search) ||
+                a.Hotel!.City!.Country.Contains(search));
+
+        var optionAlerts = await allotQ
+            .Select(a => new AlertDto(
+                $"Hotel option payment for {a.Hotel!.Name} due {a.OptionDueDate!.Value:dd/MM}",
                 a.OptionDueDate!.Value,
                 a.OptionDueDate!.Value <= today.AddDays(1) ? Severity.Danger : Severity.Warning,
-                $"allotment:{a.Id}"
+                $"allotment:{a.Id}",
+                a.Hotel!.Name,
+                a.Hotel!.City!.Country,
+                null
             ))
             .ToListAsync();
 
-        var upcomingDeposits = await _db.Reservations
-            .Where(r => r.DepositDueDate != null && r.Status != ReservationStatus.Cancelled
-                        && r.DepositDueDate >= today && r.DepositDueDate <= today.AddDays(3))
+        // Reservation deposit/balance dues
+        var resQ = _db.Reservations
+            .Include(r => r.Customer)
+            .Where(r => r.Status != ReservationStatus.Cancelled &&
+                ((r.DepositDueDate != null && r.DepositDueDate >= today && r.DepositDueDate <= today.AddDays(3)) ||
+                 (r.BalanceDueDate != null && r.BalanceDueDate >= today && r.BalanceDueDate <= today.AddDays(3))));
+
+        if (customerId != null) resQ = resQ.Where(r => r.CustomerId == customerId);
+        if (!string.IsNullOrWhiteSpace(search))
+            resQ = resQ.Where(r => r.Customer!.Name.Contains(search));
+
+        // If hotel/country filters are set, join to items->allotment->hotel
+        if (hotelId != null || !string.IsNullOrWhiteSpace(country))
+        {
+            resQ = resQ.Where(r => r.Items.Any(i =>
+                i.AllotmentRoomTypeId != null &&
+                _db.AllotmentRoomTypes
+                    .Where(x => x.Id == i.AllotmentRoomTypeId)
+                    .Any(x => (hotelId == null || x.Allotment!.HotelId == hotelId) &&
+                              (country == null || x.Allotment!.Hotel!.City!.Country == country))));
+        }
+
+        var resList = await resQ.AsNoTracking().ToListAsync();
+
+        var dep = resList.Where(r => r.DepositDueDate != null)
             .Select(r => new AlertDto(
-                $"Προκαταβολή για {r.Title} έως {r.DepositDueDate:dd/MM}", r.DepositDueDate!.Value,
+                $"Reservation deposit for {r.Title} due {r.DepositDueDate:dd/MM}",
+                r.DepositDueDate!.Value,
                 r.DepositDueDate!.Value <= today.AddDays(1) ? Severity.Danger : Severity.Warning,
-                $"reservation:{r.Id}"))
-            .ToListAsync();
+                $"reservation:{r.Id}",
+                HotelName: null, // optional enrich later if you want top hotel name
+                Country: null,
+                CustomerName: r.Customer!.Name
+            ));
 
-        var upcomingBalances = await _db.Reservations
-            .Where(r => r.BalanceDueDate != null && r.Status != ReservationStatus.Cancelled
-                        && r.BalanceDueDate >= today && r.BalanceDueDate <= today.AddDays(3))
+        var bal = resList.Where(r => r.BalanceDueDate != null)
             .Select(r => new AlertDto(
-                $"Εξόφληση για {r.Title} έως {r.BalanceDueDate:dd/MM}", r.BalanceDueDate!.Value,
+                $"Reservation balance for {r.Title} due {r.BalanceDueDate:dd/MM}",
+                r.BalanceDueDate!.Value,
                 r.BalanceDueDate!.Value <= today.AddDays(1) ? Severity.Danger : Severity.Warning,
-                $"reservation:{r.Id}"))
-            .ToListAsync();
+                $"reservation:{r.Id}",
+                HotelName: null,
+                Country: null,
+                CustomerName: r.Customer!.Name
+            ));
 
-        return upcomingOption.Concat(upcomingDeposits).Concat(upcomingBalances)
-            .OrderBy(x => x.DueDate).ToList();
+        return optionAlerts.Concat(dep).Concat(bal)
+            .OrderBy(x => x.DueDate)
+            .ToList();
     }
 }

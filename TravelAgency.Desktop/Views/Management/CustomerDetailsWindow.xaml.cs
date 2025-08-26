@@ -1,0 +1,56 @@
+﻿using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
+using Microsoft.EntityFrameworkCore;
+using TravelAgency.Data;
+
+namespace TravelAgency.Desktop.Views
+{
+    public partial class CustomerDetailsWindow : Window
+    {
+        private readonly TravelAgencyDbContext _db;
+        private readonly int _customerId;
+
+        public CustomerDetailsWindow(TravelAgencyDbContext db, int customerId)
+        {
+            InitializeComponent();
+            _db = db; _customerId = customerId;
+            _ = LoadAsync();
+        }
+
+        private async Task LoadAsync()
+        {
+            var c = await _db.Customers.AsNoTracking().FirstAsync(x => x.Id == _customerId);
+
+            var recentReservations = await _db.Reservations
+                .Where(r => r.CustomerId == _customerId)
+                .OrderByDescending(r => r.UpdatedAt)
+                .Take(10)
+                .Select(r => r.Title)
+                .ToListAsync();
+
+            var logs = await _db.UpdateLogs
+                .Where(x => x.EntityType == "Customer" && x.EntityId == _customerId)
+                .OrderByDescending(x => x.ChangedAt)
+                .Take(100)
+                .AsNoTracking()
+                .ToListAsync();
+
+            DataContext = new
+            {
+                c.Name,
+                c.Email,
+                c.Phone,
+                OldBalance = $"Old balance: {c.OldBalance:0.##}",
+                c.Notes,
+                CreatedUpdated = $"Created: {c.CreatedAt:u} | Updated: {c.UpdatedAt:u}",
+                Reservations = recentReservations,
+                History = logs.Select(l => new
+                {
+                    Header = $"{l.ChangedAt:u} • {l.Field}",
+                    Diff = $"{l.OldValue} → {l.NewValue}"
+                }).ToList()
+            };
+        }
+    }
+}

@@ -42,6 +42,12 @@
                       SelectedItem="{Binding Selected}"
                       IsReadOnly="True"
                       AutoGenerateColumns="False">
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <EventSetter Event="MouseDoubleClick"
+                                     Handler="OnRowDoubleClick" />
+                    </Style>
+                </DataGrid.RowStyle>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Hotel"
                                         Binding="{Binding Name}"
@@ -120,6 +126,18 @@
                         <TextBox Width="240"
                                  Text="{Binding EditEmail}"
                                  IsEnabled="{Binding IsEditing}" />
+                    </StackPanel>
+                    <StackPanel Margin="0 0 0 15">
+                        <TextBlock Text="Notes"
+                                   Width="80"
+                                   VerticalAlignment="Center" />
+                        <TextBox Width="300"
+                                 Text="{Binding EditNotes}"
+                                 AcceptsReturn="True"
+                                 Height="60"
+                                 TextWrapping="Wrap"
+                                 IsEnabled="{Binding IsEditing}" />
+
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
