@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿// ... usings same as before
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.ObjectModel;
@@ -16,7 +17,6 @@ namespace TravelAgency.Desktop.ViewModels
 
         [ObservableProperty] private Hotel? selected;
         [ObservableProperty] private string? searchText;
-        [ObservableProperty] private string? editNotes;
 
         [ObservableProperty] private bool isEditing;
         [ObservableProperty] private string editorTitle = "Select a row and click Edit, or click Add New";
@@ -27,6 +27,7 @@ namespace TravelAgency.Desktop.ViewModels
         [ObservableProperty] private string? editAddress;
         [ObservableProperty] private string? editPhone;
         [ObservableProperty] private string? editEmail;
+        [ObservableProperty] private string? editNotes;
 
         private bool _isNewMode;
         private int? _editingId;
@@ -54,7 +55,8 @@ namespace TravelAgency.Desktop.ViewModels
         private void BeginNew()
         {
             _isNewMode = true; _editingId = null; IsEditing = true;
-            EditName = ""; EditAddress = ""; EditPhone = ""; EditEmail = ""; EditCity = Cities.FirstOrDefault();
+            EditName = ""; EditAddress = ""; EditPhone = ""; EditEmail = ""; EditNotes = "";
+            EditCity = Cities.FirstOrDefault();
             EditorTitle = "Add New Hotel"; EditorHint = "Fill the fields and click Save.";
         }
 
@@ -63,7 +65,7 @@ namespace TravelAgency.Desktop.ViewModels
         {
             if (Selected == null) return;
             _isNewMode = false; _editingId = Selected.Id; IsEditing = true;
-            EditName = Selected.Name; EditAddress = Selected.Address; EditPhone = Selected.Phone; EditEmail = Selected.Email;
+            EditName = Selected.Name; EditAddress = Selected.Address; EditPhone = Selected.Phone; EditEmail = Selected.Email; EditNotes = Selected.Notes;
             EditCity = Cities.FirstOrDefault(c => c.Id == Selected.CityId);
             EditorTitle = $"Edit Hotel #{Selected.Id}"; EditorHint = "Change values and click Save.";
         }
@@ -75,12 +77,21 @@ namespace TravelAgency.Desktop.ViewModels
 
             if (_isNewMode)
             {
-                _db.Hotels.Add(new Hotel { Name = EditName!.Trim(), CityId = EditCity.Id, Address = EditAddress, Phone = EditPhone, Email = EditEmail, Notes = EditNotes });
+                _db.Hotels.Add(new Hotel
+                {
+                    Name = EditName!.Trim(),
+                    CityId = EditCity.Id,
+                    Address = EditAddress,
+                    Phone = EditPhone,
+                    Email = EditEmail,
+                    Notes = EditNotes
+                });
             }
             else if (_editingId.HasValue)
             {
                 var h = await _db.Hotels.FirstAsync(x => x.Id == _editingId.Value);
-                h.Name = EditName!.Trim(); h.CityId = EditCity.Id; h.Address = EditAddress; h.Phone = EditPhone; h.Email = EditEmail; h.Notes = EditNotes;
+                h.Name = EditName!.Trim(); h.CityId = EditCity.Id;
+                h.Address = EditAddress; h.Phone = EditPhone; h.Email = EditEmail; h.Notes = EditNotes;
             }
 
             await _db.SaveChangesAsync();
@@ -100,8 +111,7 @@ namespace TravelAgency.Desktop.ViewModels
         private async Task DeleteAsync()
         {
             if (Selected == null) return;
-            var h = await _db.Hotels.FirstAsync(x => x.Id == Selected.Id);
-            _db.Hotels.Remove(h);
+            _db.Hotels.Remove(await _db.Hotels.FirstAsync(x => x.Id == Selected.Id));
             await _db.SaveChangesAsync();
             await LoadAsync();
         }

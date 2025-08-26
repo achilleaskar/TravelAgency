@@ -1,0 +1,254 @@
+﻿<UserControl x:Class="TravelAgency.Desktop.Views.ReservationsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="White">
+    <DockPanel>
+        <!-- Filters for picking items to add -->
+        <Grid DockPanel.Dock="Top"
+              Margin="8,6,8,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="180" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="160" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="160" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Text="City"
+                       Style="{StaticResource FormLabel}" />
+            <ComboBox  Grid.Column="1"
+                       ItemsSource="{Binding Cities}"
+                       DisplayMemberPath="Name"
+                       SelectedItem="{Binding FilterCity}"
+                       Style="{StaticResource FormControl}" />
+
+            <TextBlock Grid.Column="3"
+                       Text="From"
+                       Style="{StaticResource FormLabel}" />
+            <DatePicker Grid.Column="4"
+                        SelectedDate="{Binding FilterFrom}"
+                        Style="{StaticResource FormControl}" />
+
+            <TextBlock Grid.Column="6"
+                       Text="To"
+                       Style="{StaticResource FormLabel}" />
+            <DatePicker Grid.Column="7"
+                        SelectedDate="{Binding FilterTo}"
+                        Style="{StaticResource FormControl}" />
+
+            <TextBlock Grid.Column="9"
+                       Text="Search"
+                       Style="{StaticResource FormLabel}" />
+            <TextBox   Grid.Column="10"
+                       Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                       Style="{StaticResource FormControl}" />
+
+            <Button Grid.Column="12"
+                    Content="Load"
+                    Command="{Binding LoadAvailableCommand}"
+                    Style="{StaticResource FormControl}" />
+        </Grid>
+
+        <Grid Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="3*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: available allotment room types to add -->
+            <GroupBox Grid.Column="0"
+                      Header="Available Rooms">
+                <DockPanel>
+                    <DataGrid ItemsSource="{Binding Available}"
+                              SelectedItem="{Binding SelectedAvailable}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Hotel"
+                                                Binding="{Binding Hotel}"
+                                                Width="180" />
+                            <DataGridTextColumn Header="Room"
+                                                Binding="{Binding RoomType}"
+                                                Width="140" />
+                            <DataGridTextColumn Header="Free"
+                                                Binding="{Binding Free}"
+                                                Width="80" />
+                            <DataGridTextColumn Header="Price"
+                                                Binding="{Binding Price, StringFormat={}{0:0.##}}"
+                                                Width="100" />
+                            <DataGridTextColumn Header="Currency"
+                                                Binding="{Binding Currency}"
+                                                Width="80" />
+                            <DataGridTextColumn Header="Dates"
+                                                Binding="{Binding Range}"
+                                                Width="160" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <StackPanel DockPanel.Dock="Bottom"
+                                Orientation="Horizontal"
+                                Margin="6">
+                        <TextBlock Text="Qty"
+                                   Style="{StaticResource FormLabel}" />
+                        <TextBox Width="80"
+                                 Text="{Binding AddQty}"
+                                 Style="{StaticResource FormControl}" />
+                        <Button Content="Add to Basket"
+                                Command="{Binding AddAvailableCommand}"
+                                Style="{StaticResource FormControl}" />
+                    </StackPanel>
+                </DockPanel>
+            </GroupBox>
+
+            <GridSplitter Grid.Column="1"
+                          Width="12" />
+
+            <!-- Right: Reservation editor -->
+            <GroupBox Grid.Column="2"
+                      Header="Reservation">
+                <DockPanel>
+                    <!-- fields -->
+                    <StackPanel DockPanel.Dock="Top"
+                                Margin="6">
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="Title"
+                                       Style="{StaticResource FormLabel}" />
+                            <TextBox Width="360"
+                                     Text="{Binding Title}"
+                                     Style="{StaticResource FormControl}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="Customer"
+                                       Style="{StaticResource FormLabel}" />
+                            <ComboBox Width="300"
+                                      ItemsSource="{Binding Customers}"
+                                      DisplayMemberPath="Name"
+                                      SelectedItem="{Binding SelectedCustomer}"
+                                      Style="{StaticResource FormControl}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="From / To"
+                                       Style="{StaticResource FormLabel}" />
+                            <DatePicker SelectedDate="{Binding ResFrom}"
+                                        Style="{StaticResource FormControl}" />
+                            <DatePicker SelectedDate="{Binding ResTo}"
+                                        Style="{StaticResource FormControl}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="Deposit Due"
+                                       Style="{StaticResource FormLabel}" />
+                            <DatePicker SelectedDate="{Binding DepositDue}"
+                                        Style="{StaticResource FormControl}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="Balance Due"
+                                       Style="{StaticResource FormLabel}" />
+                            <DatePicker SelectedDate="{Binding BalanceDue}"
+                                        Style="{StaticResource FormControl}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="Notes"
+                                       Style="{StaticResource FormLabel}" />
+                            <TextBox Width="420"
+                                     Height="64"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     Text="{Binding Notes}"
+                                     Style="{StaticResource FormControl}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- basket -->
+                    <DataGrid ItemsSource="{Binding Basket}"
+                              SelectedItem="{Binding SelectedLine}"
+                              AutoGenerateColumns="False"
+                              Margin="6"
+                              Height="240">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Type"
+                                                Binding="{Binding Kind}"
+                                                Width="90" />
+                            <DataGridTextColumn Header="Hotel/Service"
+                                                Binding="{Binding Title}"
+                                                Width="220" />
+                            <DataGridTextColumn Header="Qty"
+                                                Binding="{Binding Qty}"
+                                                Width="80" />
+                            <DataGridTextColumn Header="Unit Price"
+                                                Binding="{Binding UnitPrice, StringFormat={}{0:0.##}}"
+                                                Width="110" />
+                            <DataGridTextColumn Header="Currency"
+                                                Binding="{Binding Currency}"
+                                                Width="90" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <!-- add service line -->
+                    <StackPanel Orientation="Horizontal"
+                                Margin="6,0,6,6">
+                        <TextBlock Text="Service"
+                                   Style="{StaticResource FormLabel}" />
+                        <TextBox Width="220"
+                                 Text="{Binding ServiceName}"
+                                 Style="{StaticResource FormControl}" />
+                        <TextBlock Text="Qty"
+                                   Style="{StaticResource FormLabel}" />
+                        <TextBox Width="80"
+                                 Text="{Binding ServiceQty}"
+                                 Style="{StaticResource FormControl}" />
+                        <TextBlock Text="Price"
+                                   Style="{StaticResource FormLabel}" />
+                        <TextBox Width="100"
+                                 Text="{Binding ServicePrice}"
+                                 Style="{StaticResource FormControl}" />
+                        <TextBlock Text="Cur"
+                                   Style="{StaticResource FormLabel}" />
+                        <TextBox Width="70"
+                                 Text="{Binding ServiceCurrency}"
+                                 Style="{StaticResource FormControl}" />
+                        <Button Content="Add Service"
+                                Command="{Binding AddServiceCommand}"
+                                Style="{StaticResource FormControl}" />
+                        <Button Content="Remove Selected"
+                                Command="{Binding RemoveSelectedCommand}"
+                                Style="{StaticResource FormControl}" />
+                    </StackPanel>
+
+                    <!-- actions -->
+                    <StackPanel DockPanel.Dock="Bottom"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Margin="6">
+                        <Button Content="Save Reservation"
+                                Command="{Binding SaveCommand}"
+                                Style="{StaticResource FormControl}" />
+                        <Button Content="Cancel"
+                                Command="{Binding CancelCommand}"
+                                Style="{StaticResource FormControl}" />
+                    </StackPanel>
+                </DockPanel>
+            </GroupBox>
+        </Grid>
+    </DockPanel>
+</UserControl>

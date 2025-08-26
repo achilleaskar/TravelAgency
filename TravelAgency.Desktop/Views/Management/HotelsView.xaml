@@ -1,158 +1,173 @@
 ﻿<UserControl x:Class="TravelAgency.Desktop.Views.HotelsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             Background="White"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <DockPanel>
-        <StackPanel DockPanel.Dock="Top"
-                    Orientation="Horizontal"
-                    Margin="8">
-            <StackPanel.Resources>
-                <Style TargetType="Control">
-                    <Setter Property="Margin"
-                            Value="0,0,8,0" />
-                    <Setter Property="VerticalAlignment"
-                            Value="Center" />
-                </Style>
-            </StackPanel.Resources>
+        <!-- Toolbar -->
+        <Grid DockPanel.Dock="Top"
+              Margin="8,6,8,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-            <TextBox Width="220"
-                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-            <Button Content="Load"
-                    Command="{Binding LoadCommand}" />
-            <Separator Width="16" />
-            <Button Content="Add New"
-                    Command="{Binding BeginNewCommand}" />
-            <Button Content="Edit"
+            <TextBlock Grid.Column="0"
+                       Text="Search"
+                       Style="{StaticResource FormLabel}" />
+            <TextBox   Grid.Column="1"
+                       Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                       Style="{StaticResource FormControl}" />
+
+            <Button Grid.Column="3"
+                    Content="Load"
+                    Command="{Binding LoadCommand}"
+                    Style="{StaticResource FormControl}" />
+            <Button Grid.Column="5"
+                    Content="Add New"
+                    Command="{Binding BeginNewCommand}"
+                    Style="{StaticResource FormControl}" />
+            <Button Grid.Column="7"
+                    Content="Edit"
                     Command="{Binding BeginEditCommand}"
-                    IsEnabled="{Binding CanEdit}" />
-            <Button Content="Delete"
-                    Command="{Binding DeleteCommand}"
-                    IsEnabled="{Binding CanDelete}" />
-        </StackPanel>
+                    IsEnabled="{Binding CanEdit}"
+                    Style="{StaticResource FormControl}" />
+        </Grid>
 
         <Grid Margin="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="12" />
                 <ColumnDefinition Width="2*" />
-            </Grid.ColumnDefinitions>
+                </Grid.Columninitions>
 
-            <DataGrid Grid.Column="0"
-                      ItemsSource="{Binding Items}"
-                      SelectedItem="{Binding Selected}"
-                      IsReadOnly="True"
-                      AutoGenerateColumns="False">
-                <DataGrid.RowStyle>
-                    <Style TargetType="DataGridRow">
-                        <EventSetter Event="MouseDoubleClick"
-                                     Handler="OnRowDoubleClick" />
-                    </Style>
-                </DataGrid.RowStyle>
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Hotel"
-                                        Binding="{Binding Name}"
-                                        Width="220" />
-                    <DataGridTextColumn Header="City"
-                                        Binding="{Binding City.Name}"
-                                        Width="160" />
-                    <DataGridTextColumn Header="Address"
-                                        Binding="{Binding Address}"
-                                        Width="*" />
-                    <DataGridTextColumn Header="Phone"
-                                        Binding="{Binding Phone}"
-                                        Width="140" />
-                    <DataGridTextColumn Header="Email"
-                                        Binding="{Binding Email}"
-                                        Width="180" />
-                </DataGrid.Columns>
-            </DataGrid>
+                <DataGrid Grid.Column="0"
+                          ItemsSource="{Binding Items}"
+                          SelectedItem="{Binding Selected}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Hotel"
+                                            Binding="{Binding Name}"
+                                            Width="220" />
+                        <DataGridTextColumn Header="City"
+                                            Binding="{Binding City.Name}"
+                                            Width="160" />
+                        <DataGridTextColumn Header="Address"
+                                            Binding="{Binding Address}"
+                                            Width="*" />
+                        <DataGridTextColumn Header="Phone"
+                                            Binding="{Binding Phone}"
+                                            Width="140" />
+                        <DataGridTextColumn Header="Email"
+                                            Binding="{Binding Email}"
+                                            Width="180" />
+                    </DataGrid.Columns>
+                </DataGrid>
 
-            <GridSplitter Grid.Column="1"
-                          Width="12" />
+                <GridSplitter Grid.Column="1"
+                              Width="12" />
 
-            <Border Grid.Column="2"
-                    Padding="12"
-                    BorderBrush="#DDD"
-                    BorderThickness="1"
-                    CornerRadius="6">
-                <StackPanel>
-                    <TextBlock Text="{Binding EditorTitle}"
-                               FontSize="16"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,8" />
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="Name"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <TextBox Width="260"
-                                 Text="{Binding EditName}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="City"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <ComboBox Width="220"
-                                  ItemsSource="{Binding Cities}"
-                                  DisplayMemberPath="Name"
-                                  SelectedItem="{Binding EditCity}"
-                                  IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="Address"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <TextBox Width="300"
-                                 Text="{Binding EditAddress}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="Phone"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <TextBox Width="180"
-                                 Text="{Binding EditPhone}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,16">
-                        <TextBlock Text="Email"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <TextBox Width="240"
-                                 Text="{Binding EditEmail}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-                    <StackPanel Style="{StaticResource FormRow}">
-                        <TextBlock Text="Notes"
-                                   Style="{StaticResource FormLabel}" />
-                        <TextBox Width="360"
-                                 Height="60"
-                                 TextWrapping="Wrap"
-                                 AcceptsReturn="True"
-                                 Text="{Binding EditNotes}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
+                <Border Grid.Column="2"
+                        Padding="12"
+                        BorderBrush="#DDD"
+                        BorderThickness="1"
+                        CornerRadius="6">
+                    <StackPanel>
+                        <TextBlock Text="{Binding EditorTitle}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,8" />
 
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="Save"
-                                Command="{Binding SaveCommand}"
-                                IsEnabled="{Binding IsEditing}" />
-                        <Button Content="Cancel"
-                                Command="{Binding CancelCommand}"
-                                Margin="8,0,0,0"
-                                IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="Name"
+                                       Style="{StaticResource FormLabel}" />
+                            <TextBox Width="260"
+                                     Text="{Binding EditName}"
+                                     Style="{StaticResource FormControl}"
+                                     IsEnabled="{Binding IsEditing}" />
+                        </StackPanel>
 
-                    <TextBlock Text="{Binding EditorHint}"
-                               Foreground="Gray"
-                               Margin="0,12,0,0" />
-                </StackPanel>
-            </Border>
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="City"
+                                       Style="{StaticResource FormLabel}" />
+                            <ComboBox Width="220"
+                                      ItemsSource="{Binding Cities}"
+                                      DisplayMemberPath="Name"
+                                      SelectedItem="{Binding EditCity}"
+                                      Style="{StaticResource FormControl}"
+                                      IsEnabled="{Binding IsEditing}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="Address"
+                                       Style="{StaticResource FormLabel}" />
+                            <TextBox Width="320"
+                                     Text="{Binding EditAddress}"
+                                     Style="{StaticResource FormControl}"
+                                     IsEnabled="{Binding IsEditing}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="Phone"
+                                       Style="{StaticResource FormLabel}" />
+                            <TextBox Width="180"
+                                     Text="{Binding EditPhone}"
+                                     Style="{StaticResource FormControl}"
+                                     IsEnabled="{Binding IsEditing}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="Email"
+                                       Style="{StaticResource FormLabel}" />
+                            <TextBox Width="240"
+                                     Text="{Binding EditEmail}"
+                                     Style="{StaticResource FormControl}"
+                                     IsEnabled="{Binding IsEditing}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Style="{StaticResource FormRow}">
+                            <TextBlock Text="Notes"
+                                       Style="{StaticResource FormLabel}" />
+                            <TextBox Width="360"
+                                     Height="60"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     Text="{Binding EditNotes}"
+                                     Style="{StaticResource FormControl}"
+                                     IsEnabled="{Binding IsEditing}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Save"
+                                    Command="{Binding SaveCommand}"
+                                    IsEnabled="{Binding IsEditing}"
+                                    Style="{StaticResource FormControl}" />
+                            <Button Content="Cancel"
+                                    Command="{Binding CancelCommand}"
+                                    IsEnabled="{Binding IsEditing}"
+                                    Style="{StaticResource FormControl}" />
+                            <Button Content="Delete"
+                                    Command="{Binding DeleteCommand}"
+                                    IsEnabled="{Binding CanDelete}"
+                                    Style="{StaticResource FormControl}" />
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding EditorHint}"
+                                   Foreground="Gray"
+                                   Margin="0,8,0,0" />
+                    </StackPanel>
+                </Border>
         </Grid>
     </DockPanel>
 </UserControl>

@@ -33,7 +33,12 @@
                     <TabItem Header="Customers">
                         <views:CustomersView />
                     </TabItem>
-                    <!-- later: Allotments, Reservations, etc. -->
+                    <TabItem Header="Allotments">
+                        <views:AllotmentsView />
+                    </TabItem>
+                    <TabItem Header="Reservations">
+                        <views:ReservationsView />
+                    </TabItem>
                 </TabControl>
             </TabItem>
         </TabControl>

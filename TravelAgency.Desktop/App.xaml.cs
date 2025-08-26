@@ -29,6 +29,9 @@ public partial class App : Application
                 services.AddScoped<AllotmentService>();
                 services.AddScoped<ReservationService>();
                 services.AddScoped<AlertService>();
+                services.AddTransient<AllotmentsViewModel>();
+                services.AddTransient<ReservationsViewModel>();
+
 
                 // ViewModels
                 services.AddSingleton<MainViewModel>();
