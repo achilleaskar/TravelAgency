@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
              d:DesignHeight="450"
+             Background="White"
              d:DesignWidth="800">
     <Grid Margin="10">
         <Grid.RowDefinitions>
@@ -12,9 +13,9 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Filters -->
+        <!-- Filters with labels -->
         <StackPanel Orientation="Horizontal"
-                    Margin="0,0,0,8">
+                    Margin="0,0,0,8" >
             <StackPanel.Resources>
                 <Style TargetType="Control">
                     <Setter Property="Margin"
@@ -24,27 +25,49 @@
                 </Style>
             </StackPanel.Resources>
 
-            <ComboBox Width="220"
-                      ItemsSource="{Binding Customers}"
-                      DisplayMemberPath="Name"
-                      SelectedItem="{Binding SelectedCustomer}" />
-            <ComboBox Width="220"
-                      ItemsSource="{Binding Countries}"
-                      SelectedItem="{Binding SelectedCountry}" />
-            <ComboBox Width="220"
-                      ItemsSource="{Binding Hotels}"
-                      DisplayMemberPath="Name"
-                      SelectedItem="{Binding SelectedHotel}" />
-            <TextBox Width="220"
-                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            <StackPanel Style="{StaticResource FormRow}">
+                <TextBlock Text="Customer"
+                           Style="{StaticResource FormLabel}" />
+                <ComboBox Width="220"
+                          ItemsSource="{Binding Customers}"
+                          DisplayMemberPath="Name"
+                          SelectedItem="{Binding SelectedCustomer}" />
+            </StackPanel>
+
+            <StackPanel Style="{StaticResource FormRow}">
+                <TextBlock Text="Country"
+                           Style="{StaticResource FormLabel}" />
+                <ComboBox Width="160"
+                          ItemsSource="{Binding Countries}"
+                          SelectedItem="{Binding SelectedCountry}" />
+            </StackPanel>
+
+            <StackPanel Style="{StaticResource FormRow}">
+                <TextBlock Text="Hotel"
+                           Style="{StaticResource FormLabel}" />
+                <ComboBox Width="220"
+                          ItemsSource="{Binding Hotels}"
+                          DisplayMemberPath="Name"
+                          SelectedItem="{Binding SelectedHotel}" />
+            </StackPanel>
+
+            <StackPanel Style="{StaticResource FormRow}">
+                <TextBlock Text="Search"
+                           Style="{StaticResource FormLabel}" />
+                <TextBox Width="220"
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            </StackPanel>
+
             <Button Content="Refresh"
-                    Command="{Binding RefreshCommand}" />
+                    Command="{Binding RefreshCommand}"
+                    Margin="8,0,0,0" />
         </StackPanel>
 
-        <!-- Alerts grid -->
+        <!-- Alerts grid (unchanged columns or include new ones if you added them) -->
         <DataGrid Grid.Row="1"
                   ItemsSource="{Binding Alerts}"
-                  AutoGenerateColumns="False">
+                  AutoGenerateColumns="False"
+                  Margin="0">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Due"
                                     Binding="{Binding DueDate, StringFormat=dd/MM/yyyy}"

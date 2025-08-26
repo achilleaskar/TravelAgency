@@ -127,17 +127,15 @@
                                  Text="{Binding EditEmail}"
                                  IsEnabled="{Binding IsEditing}" />
                     </StackPanel>
-                    <StackPanel Margin="0 0 0 15">
+                    <StackPanel Style="{StaticResource FormRow}">
                         <TextBlock Text="Notes"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <TextBox Width="300"
-                                 Text="{Binding EditNotes}"
-                                 AcceptsReturn="True"
+                                   Style="{StaticResource FormLabel}" />
+                        <TextBox Width="360"
                                  Height="60"
                                  TextWrapping="Wrap"
+                                 AcceptsReturn="True"
+                                 Text="{Binding EditNotes}"
                                  IsEnabled="{Binding IsEditing}" />
-
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal">
