@@ -9,10 +9,19 @@ namespace TravelAgency.Desktop.Views
 {
     public partial class CustomersView : UserControl
     {
+        private bool _first = true;
+
         public CustomersView()
         {
             InitializeComponent();
             DataContext = App.HostRef!.Services.GetRequiredService<CustomersViewModel>();
+            Loaded += OnLoaded;
+        }
+
+        private async void OnLoaded(object s, RoutedEventArgs e)
+        {
+            if (_first && DataContext is CustomersViewModel vm && vm.LoadCommand.CanExecute(null))
+            { _first = false; await vm.LoadCommand.ExecuteAsync(null); }
         }
 
         private void OnRowDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)

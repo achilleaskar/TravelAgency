@@ -21,10 +21,12 @@ public partial class App : Application
         HostRef = Host.CreateDefaultBuilder()
             .ConfigureServices((ctx, services) =>
             {
-                var cs = ctx.Configuration.GetConnectionString("MySql")!;
-                services.AddDbContext<TravelAgencyDbContext>(opt =>
-                    opt.UseMySql(cs, ServerVersion.AutoDetect(cs)));
-
+                // instead of AddDbContext<TravelAgencyDbContext>(...)
+                services.AddDbContextFactory<TravelAgencyDbContext>(opt =>
+                {
+                    var cs = ctx.Configuration.GetConnectionString("MySql")!;
+                    opt.UseMySql(cs, ServerVersion.AutoDetect(cs));
+                });
                 // Services already here...
                 services.AddScoped<AllotmentService>();
                 services.AddScoped<ReservationService>();

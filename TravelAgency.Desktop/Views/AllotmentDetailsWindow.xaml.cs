@@ -8,25 +8,25 @@ namespace TravelAgency.Desktop.Views
 {
     public partial class AllotmentDetailsWindow : Window
     {
-        private readonly TravelAgencyDbContext _db;
+        private readonly TravelAgencyDbContext db;
         private readonly int _allotmentId;
 
         public AllotmentDetailsWindow(TravelAgencyDbContext db, int allotmentId)
         {
             InitializeComponent();
-            _db = db; _allotmentId = allotmentId;
+            db = db; _allotmentId = allotmentId;
             _ = LoadAsync();
         }
 
         private async Task LoadAsync()
         {
-            var a = await _db.Allotments
+            var a = await db.Allotments
                 .Include(x => x.Hotel)!.ThenInclude(h => h.City)
                 .Include(x => x.RoomTypes)!.ThenInclude(rt => rt.RoomType)
                 .AsNoTracking()
                 .FirstAsync(x => x.Id == _allotmentId);
 
-            var logs = await _db.UpdateLogs
+            var logs = await db.UpdateLogs
                 .Where(x => x.EntityType == "Allotment" && x.EntityId == _allotmentId)
                 .OrderByDescending(x => x.ChangedAt)
                 .Take(100)

@@ -35,4 +35,10 @@
                 Value="Center" />
     </Style>
 
+    <!-- Make all UserControls white by default -->
+    <Style TargetType="{x:Type UserControl}">
+        <Setter Property="Background"
+                Value="White" />
+    </Style>
+
 </ResourceDictionary>

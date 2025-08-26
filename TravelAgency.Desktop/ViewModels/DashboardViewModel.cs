@@ -9,7 +9,7 @@ using TravelAgency.Services;
 public partial class DashboardViewModel : ObservableObject
 {
     private readonly AlertService _alerts;
-    private readonly TravelAgencyDbContext _db;
+    private readonly IDbContextFactory<TravelAgencyDbContext> _dbf; 
 
     public ObservableCollection<AlertDto> Alerts { get; } = new();
     public ObservableCollection<Customer> Customers { get; } = new();
@@ -21,24 +21,26 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty] private string? selectedCountry;
     [ObservableProperty] private string? searchText;
 
-    public DashboardViewModel(AlertService alerts, TravelAgencyDbContext db)
+    public DashboardViewModel(AlertService alerts, IDbContextFactory<TravelAgencyDbContext> dbf)
     {
         _alerts = alerts;
-        _db = db;
+        _dbf = dbf;
         _ = LoadFiltersAsync();
         _ = RefreshAsync();
     }
 
     private async Task LoadFiltersAsync()
     {
+        await using var db = await _dbf.CreateDbContextAsync();
+
         Customers.Clear();
-        foreach (var c in await _db.Customers.OrderBy(x => x.Name).ToListAsync()) Customers.Add(c);
+        foreach (var c in await db.Customers.OrderBy(x => x.Name).ToListAsync()) Customers.Add(c);
 
         Hotels.Clear();
-        foreach (var h in await _db.Hotels.OrderBy(x => x.Name).ToListAsync()) Hotels.Add(h);
+        foreach (var h in await db.Hotels.OrderBy(x => x.Name).ToListAsync()) Hotels.Add(h);
 
         Countries.Clear();
-        foreach (var country in await _db.Cities.Select(x => x.Country).Distinct().OrderBy(x => x).ToListAsync())
+        foreach (var country in await db.Cities.Select(x => x.Country).Distinct().OrderBy(x => x).ToListAsync())
             Countries.Add(country);
     }
 

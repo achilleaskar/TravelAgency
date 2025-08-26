@@ -9,7 +9,8 @@ namespace TravelAgency.Desktop.ViewModels
 {
     public partial class RoomTypesViewModel : ObservableObject
     {
-        private readonly TravelAgencyDbContext _db;
+        private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
+        public RoomTypesViewModel(IDbContextFactory<TravelAgencyDbContext> dbf) => _dbf = dbf;
 
         public ObservableCollection<RoomType> Items { get; } = new();
 
@@ -28,8 +29,7 @@ namespace TravelAgency.Desktop.ViewModels
         // mode flags
         private bool _isNewMode;
         private int? _editingId;
-
-        public RoomTypesViewModel(TravelAgencyDbContext db) => _db = db;
+         
 
         public bool CanEdit => Selected != null && !IsEditing;
         public bool CanDelete => Selected != null && !IsEditing;
@@ -43,8 +43,10 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task LoadAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             Items.Clear();
-            var q = _db.RoomTypes.AsQueryable();
+            var q = db.RoomTypes.AsQueryable();
             if (!string.IsNullOrWhiteSpace(SearchText))
                 q = q.Where(x => x.Code.Contains(SearchText) || x.Name.Contains(SearchText));
             foreach (var it in await q.OrderBy(x => x.Code).AsNoTracking().ToListAsync())
@@ -85,20 +87,22 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task SaveAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             if (string.IsNullOrWhiteSpace(EditCode) || string.IsNullOrWhiteSpace(EditName)) return;
 
             if (_isNewMode)
             {
-                _db.RoomTypes.Add(new RoomType { Code = EditCode!.Trim(), Name = EditName!.Trim() });
+                db.RoomTypes.Add(new RoomType { Code = EditCode!.Trim(), Name = EditName!.Trim() });
             }
             else if (_editingId.HasValue)
             {
-                var entity = await _db.RoomTypes.FirstAsync(x => x.Id == _editingId.Value);
+                var entity = await db.RoomTypes.FirstAsync(x => x.Id == _editingId.Value);
                 entity.Code = EditCode!.Trim();
                 entity.Name = EditName!.Trim();
             }
 
-            await _db.SaveChangesAsync();
+            await db.SaveChangesAsync();
             IsEditing = false;
             await LoadAsync();
         }
@@ -116,10 +120,12 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task DeleteAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             if (Selected == null) return;
-            var entity = await _db.RoomTypes.FirstAsync(x => x.Id == Selected.Id);
-            _db.RoomTypes.Remove(entity);
-            await _db.SaveChangesAsync();
+            var entity = await db.RoomTypes.FirstAsync(x => x.Id == Selected.Id);
+            db.RoomTypes.Remove(entity);
+            await db.SaveChangesAsync();
             await LoadAsync();
         }
     }

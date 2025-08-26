@@ -36,7 +36,8 @@ namespace TravelAgency.Desktop.ViewModels
 
     public partial class ReservationsViewModel : ObservableObject
     {
-        private readonly TravelAgencyDbContext _db;
+        private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
+        public ReservationsViewModel(IDbContextFactory<TravelAgencyDbContext> dbf) => _dbf = dbf;
 
         // left filters
         public ObservableCollection<City> Cities { get; } = new();
@@ -67,15 +68,16 @@ namespace TravelAgency.Desktop.ViewModels
         [ObservableProperty] private string? serviceQty = "1";
         [ObservableProperty] private string? servicePrice = "0";
         [ObservableProperty] private string? serviceCurrency = "EUR";
-
-        public ReservationsViewModel(TravelAgencyDbContext db) => _db = db;
+         
 
         [RelayCommand]
         private async Task LoadAvailableAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             Available.Clear();
 
-            var q = _db.AllotmentRoomTypes
+            var q = db.AllotmentRoomTypes
                 .Include(art => art.Allotment)!.ThenInclude(a => a!.Hotel)!.ThenInclude(h => h.City)
                 .Include(art => art.RoomType)
                 .Where(art => art.Allotment!.StartDate <= FilterTo && art.Allotment!.EndDate >= FilterFrom);
@@ -92,7 +94,7 @@ namespace TravelAgency.Desktop.ViewModels
             // compute free qty (simple: total - reserved across overlapping days)
             foreach (var art in list)
             {
-                var reserved = await _db.ReservationItems
+                var reserved = await db.ReservationItems
                     .Where(x => x.AllotmentRoomTypeId == art.Id && x.Reservation!.Status != ReservationStatus.Cancelled)
                     .SumAsync(x => (int?)x.Qty) ?? 0;
 
@@ -112,11 +114,11 @@ namespace TravelAgency.Desktop.ViewModels
 
             if (Cities.Count == 0)
             {
-                foreach (var c in await _db.Cities.OrderBy(x => x.Name).ToListAsync()) Cities.Add(c);
+                foreach (var c in await db.Cities.OrderBy(x => x.Name).ToListAsync()) Cities.Add(c);
             }
             if (Customers.Count == 0)
             {
-                foreach (var c in await _db.Customers.OrderBy(x => x.Name).ToListAsync()) Customers.Add(c);
+                foreach (var c in await db.Customers.OrderBy(x => x.Name).ToListAsync()) Customers.Add(c);
             }
         }
 
@@ -166,6 +168,8 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task SaveAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             if (SelectedCustomer == null || string.IsNullOrWhiteSpace(Title) || ResFrom == null || ResTo == null) return;
 
             var r = new Reservation
@@ -176,17 +180,17 @@ namespace TravelAgency.Desktop.ViewModels
                 EndDate = ResTo!.Value.Date,
                 DepositDueDate = DepositDue,
                 BalanceDueDate = BalanceDue,
-                Status = ReservationStatus.Active,
+                // Status = <omit>  <-- let default enum value apply
                 Notes = Notes
             };
-            _db.Reservations.Add(r);
-            await _db.SaveChangesAsync();
+            db.Reservations.Add(r);
+            await db.SaveChangesAsync();
 
             foreach (var line in Basket)
             {
                 if (line.Kind == "AllotmentRoom")
                 {
-                    _db.ReservationItems.Add(new ReservationItem
+                    db.ReservationItems.Add(new ReservationItem
                     {
                         ReservationId = r.Id,
                         Kind = ReservationItemKind.AllotmentRoom,
@@ -200,7 +204,7 @@ namespace TravelAgency.Desktop.ViewModels
                 }
                 else
                 {
-                    _db.ReservationItems.Add(new ReservationItem
+                    db.ReservationItems.Add(new ReservationItem
                     {
                         ReservationId = r.Id,
                         Kind = ReservationItemKind.Service,
@@ -212,7 +216,7 @@ namespace TravelAgency.Desktop.ViewModels
                 }
             }
 
-            await _db.SaveChangesAsync();
+            await db.SaveChangesAsync();
 
             // reset form
             Title = "";

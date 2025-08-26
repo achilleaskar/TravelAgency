@@ -60,6 +60,7 @@
                                         Width="160" />
                     <DataGridTextColumn Header="Address"
                                         Binding="{Binding Address}"
+                                        MinWidth="100"
                                         Width="*" />
                     <DataGridTextColumn Header="Phone"
                                         Binding="{Binding Phone}"
@@ -78,96 +79,127 @@
                     BorderBrush="#DDD"
                     BorderThickness="1"
                     CornerRadius="6">
-                <StackPanel>
-                    <TextBlock Text="{Binding EditorTitle}"
+                <!-- One grid; labels left, fields right -->
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <!-- label -->
+                        <ColumnDefinition Width="*" />
+                        <!-- field -->
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Grid.ColumnSpan="2"
+                               Text="{Binding EditorTitle}"
                                FontSize="16"
                                FontWeight="SemiBold"
+                               Margin="0,0,0,12" />
+
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="0"
+                               Text="Name"
+                               FontWeight="SemiBold"
+                               Margin="0,0,8,8" />
+                    <TextBox   Grid.Row="1"
+                               Grid.Column="1"
+                               Text="{Binding EditName}"
+                               IsEnabled="{Binding IsEditing}"
                                Margin="0,0,0,8" />
 
-                    <StackPanel Orientation="Horizontal"
-                                Style="{StaticResource FormRow}">
-                        <TextBlock Text="Name"
-                                   Style="{StaticResource FormLabel}" />
-                        <TextBox Width="260"
-                                 Text="{Binding EditName}"
-                                 Style="{StaticResource FormControl}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
+                    <TextBlock Grid.Row="2"
+                               Grid.Column="0"
+                               Text="City"
+                               FontWeight="SemiBold"
+                               Margin="0,0,8,8" />
+                    <ComboBox  Grid.Row="2"
+                               Grid.Column="1"
+                               ItemsSource="{Binding Cities}"
+                               DisplayMemberPath="Name"
+                               SelectedItem="{Binding EditCity}"
+                               IsEnabled="{Binding IsEditing}"
+                               Margin="0,0,0,8" />
 
-                    <StackPanel Orientation="Horizontal"
-                                Style="{StaticResource FormRow}">
-                        <TextBlock Text="City"
-                                   Style="{StaticResource FormLabel}" />
-                        <ComboBox Width="220"
-                                  ItemsSource="{Binding Cities}"
-                                  DisplayMemberPath="Name"
-                                  SelectedItem="{Binding EditCity}"
-                                  Style="{StaticResource FormControl}"
-                                  IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
+                    <TextBlock Grid.Row="3"
+                               Grid.Column="0"
+                               Text="Address"
+                               FontWeight="SemiBold"
+                               Margin="0,0,8,8" />
+                    <TextBox   Grid.Row="3"
+                               Grid.Column="1"
+                               Text="{Binding EditAddress}"
+                               IsEnabled="{Binding IsEditing}"
+                               Margin="0,0,0,8" />
 
-                    <StackPanel Orientation="Horizontal"
-                                Style="{StaticResource FormRow}">
-                        <TextBlock Text="Address"
-                                   Style="{StaticResource FormLabel}" />
-                        <TextBox Width="320"
-                                 Text="{Binding EditAddress}"
-                                 Style="{StaticResource FormControl}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
+                    <TextBlock Grid.Row="4"
+                               Grid.Column="0"
+                               Text="Phone"
+                               FontWeight="SemiBold"
+                               Margin="0,0,8,8" />
+                    <TextBox   Grid.Row="4"
+                               Grid.Column="1"
+                               Text="{Binding EditPhone}"
+                               IsEnabled="{Binding IsEditing}"
+                               Margin="0,0,0,8" />
 
-                    <StackPanel Orientation="Horizontal"
-                                Style="{StaticResource FormRow}">
-                        <TextBlock Text="Phone"
-                                   Style="{StaticResource FormLabel}" />
-                        <TextBox Width="180"
-                                 Text="{Binding EditPhone}"
-                                 Style="{StaticResource FormControl}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
+                    <TextBlock Grid.Row="5"
+                               Grid.Column="0"
+                               Text="Email"
+                               FontWeight="SemiBold"
+                               Margin="0,0,8,8" />
+                    <TextBox   Grid.Row="5"
+                               Grid.Column="1"
+                               Text="{Binding EditEmail}"
+                               IsEnabled="{Binding IsEditing}"
+                               Margin="0,0,0,8" />
 
-                    <StackPanel Orientation="Horizontal"
-                                Style="{StaticResource FormRow}">
-                        <TextBlock Text="Email"
-                                   Style="{StaticResource FormLabel}" />
-                        <TextBox Width="240"
-                                 Text="{Binding EditEmail}"
-                                 Style="{StaticResource FormControl}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
+                    <TextBlock Grid.Row="6"
+                               Grid.Column="0"
+                               Text="Notes"
+                               FontWeight="SemiBold"
+                               Margin="0,0,8,8" />
+                    <TextBox   Grid.Row="6"
+                               Grid.Column="1"
+                               Text="{Binding EditNotes}"
+                               IsEnabled="{Binding IsEditing}"
+                               AcceptsReturn="True"
+                               TextWrapping="Wrap"
+                               MinHeight="64"
+                               Margin="0,0,0,8" />
 
-                    <StackPanel Orientation="Horizontal"
-                                Style="{StaticResource FormRow}">
-                        <TextBlock Text="Notes"
-                                   Style="{StaticResource FormLabel}" />
-                        <TextBox Width="360"
-                                 Height="60"
-                                 AcceptsReturn="True"
-                                 TextWrapping="Wrap"
-                                 Text="{Binding EditNotes}"
-                                 Style="{StaticResource FormControl}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal">
+                    <!-- Buttons -->
+                    <StackPanel Grid.Row="7"
+                                Grid.ColumnSpan="2"
+                                Orientation="Horizontal">
                         <Button Content="Save"
                                 Command="{Binding SaveCommand}"
                                 IsEnabled="{Binding IsEditing}"
-                                Style="{StaticResource FormControl}" />
+                                Margin="0,0,8,0" />
                         <Button Content="Cancel"
                                 Command="{Binding CancelCommand}"
                                 IsEnabled="{Binding IsEditing}"
-                                Style="{StaticResource FormControl}" />
+                                Margin="0,0,8,0" />
                         <Button Content="Delete"
                                 Command="{Binding DeleteCommand}"
-                                IsEnabled="{Binding CanDelete}"
-                                Style="{StaticResource FormControl}" />
+                                IsEnabled="{Binding CanDelete}" />
                     </StackPanel>
 
-                    <TextBlock Text="{Binding EditorHint}"
+                    <TextBlock Grid.Row="8"
+                               Grid.ColumnSpan="2"
+                               Text="{Binding EditorHint}"
                                Foreground="Gray"
-                               Margin="0,8,0,0" />
-                </StackPanel>
+                               Margin="0,36,0,0" />
+                </Grid>
             </Border>
         </Grid>
     </DockPanel>

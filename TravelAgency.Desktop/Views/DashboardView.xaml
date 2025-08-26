@@ -66,7 +66,7 @@
                        Text="Search"
                        Style="{StaticResource FormLabel}" />
             <TextBox   Grid.Column="10"
-                       Width="220"
+                       Width="210"
                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                        Style="{StaticResource FormControl}" />
 

@@ -8,20 +8,20 @@ namespace TravelAgency.Desktop.Views
 {
     public partial class HotelDetailsWindow : Window
     {
-        private readonly TravelAgencyDbContext _db;
+        private readonly TravelAgencyDbContext db;
         private readonly int _hotelId;
 
         public HotelDetailsWindow(TravelAgencyDbContext db, int hotelId)
         {
             InitializeComponent();
-            _db = db; _hotelId = hotelId;
+            db = db; _hotelId = hotelId;
             _ = LoadAsync();
         }
 
         private async Task LoadAsync()
         {
-            var h = await _db.Hotels.Include(x => x.City).AsNoTracking().FirstAsync(x => x.Id == _hotelId);
-            var logs = await _db.UpdateLogs
+            var h = await db.Hotels.Include(x => x.City).AsNoTracking().FirstAsync(x => x.Id == _hotelId);
+            var logs = await db.UpdateLogs
                 .Where(x => x.EntityType == "Hotel" && x.EntityId == _hotelId)
                 .OrderByDescending(x => x.ChangedAt)
                 .Take(100)

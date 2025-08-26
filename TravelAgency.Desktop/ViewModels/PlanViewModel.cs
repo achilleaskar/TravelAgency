@@ -12,7 +12,7 @@ namespace TravelAgency.Desktop.ViewModels
     // Προσοχή: χρειάζεται το package CommunityToolkit.Mvvm στο Desktop project
     public partial class PlanViewModel : ObservableObject
     {
-        private readonly TravelAgencyDbContext _db;
+        private readonly IDbContextFactory<TravelAgencyDbContext> _dbf; 
 
         public ObservableCollection<City> Cities { get; } = new();
         public ObservableCollection<string> DayHeaders { get; } = new();
@@ -23,9 +23,9 @@ namespace TravelAgency.Desktop.ViewModels
         [ObservableProperty] private DateTime toDate = DateTime.Today.AddDays(14);
         [ObservableProperty] private string? searchText;
 
-        public PlanViewModel(TravelAgencyDbContext db)
+        public PlanViewModel(IDbContextFactory<TravelAgencyDbContext> dbf)
         {
-            _db = db;
+            _dbf = dbf;
             _ = LoadCitiesAsync();
             BuildHeaders();
         }
@@ -36,8 +36,10 @@ namespace TravelAgency.Desktop.ViewModels
 
         private async Task LoadCitiesAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             Cities.Clear();
-            var list = await _db.Cities.OrderBy(x => x.Name).ToListAsync();
+            var list = await db.Cities.OrderBy(x => x.Name).ToListAsync();
             foreach (var c in list) Cities.Add(c);
         }
 
@@ -53,9 +55,11 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task LoadAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             Rows.Clear();
 
-            var q = _db.Allotments
+            var q = db.Allotments
                 .Include(a => a.Hotel)!.ThenInclude(h => h.City)
                 .Include(a => a.RoomTypes)!.ThenInclude(rt => rt.RoomType)
                 .Where(a => a.StartDate <= ToDate && a.EndDate > FromDate); // overlap
@@ -78,7 +82,7 @@ namespace TravelAgency.Desktop.ViewModels
             var rangeEnd = ToDate.Date.AddDays(1); // exclusive
 
             // Prefetch: όλα τα ReservationItems για τα ARTs που τέμνουν το range
-            var items = await _db.ReservationItems
+            var items = await db.ReservationItems
                 .Include(x => x.Reservation)
                 .Where(x =>
                        x.AllotmentRoomTypeId != null &&

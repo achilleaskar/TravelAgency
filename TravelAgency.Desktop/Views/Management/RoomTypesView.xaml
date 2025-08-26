@@ -3,35 +3,42 @@
              Background="White"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <DockPanel>
-        <!-- Toolbar -->
-        <StackPanel DockPanel.Dock="Top"
-                    Orientation="Horizontal"
-                    Margin="8">
-            <StackPanel.Resources>
-                <Style TargetType="Control">
-                    <Setter Property="Margin"
-                            Value="0,0,8,0" />
-                    <Setter Property="VerticalAlignment"
-                            Value="Center" />
-                </Style>
-            </StackPanel.Resources>
+        <!-- Toolbar (same structure as Hotels) -->
+        <Grid DockPanel.Dock="Top"
+              Margin="8,6,8,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-            <TextBox Width="180"
-                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-            <Button Content="Load"
-                    Command="{Binding LoadCommand}" />
-            <Separator Width="16" />
-            <Button Content="Add New"
-                    Command="{Binding BeginNewCommand}" />
-            <Button Content="Edit"
+            <TextBlock Grid.Column="0"
+                       Text="Search"
+                       Style="{StaticResource FormLabel}" />
+            <TextBox   Grid.Column="1"
+                       Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                       Style="{StaticResource FormControl}" />
+
+            <Button Grid.Column="3"
+                    Content="Load"
+                    Command="{Binding LoadCommand}"
+                    Style="{StaticResource FormControl}" />
+            <Button Grid.Column="5"
+                    Content="Add New"
+                    Command="{Binding BeginNewCommand}"
+                    Style="{StaticResource FormControl}" />
+            <Button Grid.Column="7"
+                    Content="Edit"
                     Command="{Binding BeginEditCommand}"
-                    IsEnabled="{Binding CanEdit}" />
-            <Button Content="Delete"
-                    Command="{Binding DeleteCommand}"
-                    IsEnabled="{Binding CanDelete}" />
-        </StackPanel>
+                    IsEnabled="{Binding CanEdit}"
+                    Style="{StaticResource FormControl}" />
+        </Grid>
 
-        <!-- Master–Detail -->
         <Grid Margin="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -39,12 +46,12 @@
                 <ColumnDefinition Width="2*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Master (View/Delete) -->
+            <!-- Master -->
             <DataGrid Grid.Column="0"
                       ItemsSource="{Binding Items}"
                       SelectedItem="{Binding Selected}"
-                      IsReadOnly="True"
-                      AutoGenerateColumns="False">
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Code"
                                         Binding="{Binding Code}"
@@ -55,56 +62,80 @@
                 </DataGrid.Columns>
             </DataGrid>
 
-            <!-- Splitter -->
             <GridSplitter Grid.Column="1"
-                          Width="12"
-                          HorizontalAlignment="Stretch" />
+                          Width="12" />
 
-            <!-- Detail (Add/Edit form) -->
             <Border Grid.Column="2"
                     Padding="12"
                     BorderBrush="#DDD"
                     BorderThickness="1"
                     CornerRadius="6">
-                <StackPanel>
-                    <TextBlock Text="{Binding EditorTitle}"
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="150" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Grid.ColumnSpan="2"
+                               Text="{Binding EditorTitle}"
                                FontSize="16"
                                FontWeight="SemiBold"
-                               Margin="0,0,0,8" />
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,8">
-                        <TextBlock Text="Code"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <TextBox Width="220"
-                                 Text="{Binding EditCode, UpdateSourceTrigger=PropertyChanged}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal"
-                                Margin="0,0,0,16">
-                        <TextBlock Text="Name"
-                                   Width="80"
-                                   VerticalAlignment="Center" />
-                        <TextBox Width="300"
-                                 Text="{Binding EditName, UpdateSourceTrigger=PropertyChanged}"
-                                 IsEnabled="{Binding IsEditing}" />
-                    </StackPanel>
+                               Margin="0,0,0,12" />
 
-                    <StackPanel Orientation="Horizontal">
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="0"
+                               Text="Code"
+                               FontWeight="SemiBold"
+                               Margin="0,0,8,8" />
+                    <TextBox   Grid.Row="1"
+                               Grid.Column="1"
+                               Text="{Binding EditCode}"
+                               IsEnabled="{Binding IsEditing}"
+                               Margin="0,0,0,8" />
+
+                    <TextBlock Grid.Row="2"
+                               Grid.Column="0"
+                               Text="Name"
+                               FontWeight="SemiBold"
+                               Margin="0,0,8,8" />
+                    <TextBox   Grid.Row="2"
+                               Grid.Column="1"
+                               Text="{Binding EditName}"
+                               IsEnabled="{Binding IsEditing}"
+                               Margin="0,0,0,8" />
+
+                    <StackPanel Grid.Row="3"
+                                Grid.ColumnSpan="2"
+                                Orientation="Horizontal">
                         <Button Content="Save"
                                 Command="{Binding SaveCommand}"
-                                IsEnabled="{Binding IsEditing}" />
+                                IsEnabled="{Binding IsEditing}"
+                                Margin="0,0,8,0" />
                         <Button Content="Cancel"
                                 Command="{Binding CancelCommand}"
-                                Margin="8,0,0,0"
-                                IsEnabled="{Binding IsEditing}" />
+                                IsEnabled="{Binding IsEditing}"
+                                Margin="0,0,8,0" />
+                        <Button Content="Delete"
+                                Command="{Binding DeleteCommand}"
+                                IsEnabled="{Binding CanDelete}" />
                     </StackPanel>
 
-                    <TextBlock Text="{Binding EditorHint}"
+                    <TextBlock Grid.Row="4"
+                               Grid.ColumnSpan="2"
+                               Text="{Binding EditorHint}"
                                Foreground="Gray"
-                               Margin="0,12,0,0" />
-                </StackPanel>
+                               Margin="0,36,0,0" />
+                </Grid>
             </Border>
+
         </Grid>
     </DockPanel>
 </UserControl>

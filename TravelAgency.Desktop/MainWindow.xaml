@@ -21,23 +21,27 @@
                 <views:PlanView />
             </TabItem>
 
-            <!-- New: one parent tab for all entity management screens -->
+            <!-- moved to top level -->
+            <TabItem Header="Reservations">
+                <views:ReservationsView />
+            </TabItem>
+
+            <!-- moved to top level -->
+            <TabItem Header="Allotments">
+                <views:AllotmentsView />
+            </TabItem>
+
+            <!-- keep the “masters” under Manage -->
             <TabItem Header="Manage">
                 <TabControl>
-                    <TabItem Header="Room Types">
-                        <views:RoomTypesView />
-                    </TabItem>
                     <TabItem Header="Hotels">
                         <views:HotelsView />
                     </TabItem>
+                    <TabItem Header="Room Types">
+                        <views:RoomTypesView />
+                    </TabItem>
                     <TabItem Header="Customers">
                         <views:CustomersView />
-                    </TabItem>
-                    <TabItem Header="Allotments">
-                        <views:AllotmentsView />
-                    </TabItem>
-                    <TabItem Header="Reservations">
-                        <views:ReservationsView />
                     </TabItem>
                 </TabControl>
             </TabItem>

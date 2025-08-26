@@ -14,7 +14,8 @@ namespace TravelAgency.Desktop.ViewModels
 {
     public partial class AllotmentsViewModel : ObservableObject
     {
-        private readonly TravelAgencyDbContext _db;
+        private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
+        public AllotmentsViewModel(IDbContextFactory<TravelAgencyDbContext> dbf) => _dbf = dbf;
 
         public ObservableCollection<Allotment> Allotments { get; } = new();
         public ObservableCollection<Hotel> Hotels { get; } = new();
@@ -54,17 +55,17 @@ namespace TravelAgency.Desktop.ViewModels
         private bool _isNewMode;
         private int? _editingId;
 
-        public AllotmentsViewModel(TravelAgencyDbContext db) => _db = db;
-
         public bool CanEdit => Selected != null && !IsEditing;
         public bool CanDelete => Selected != null && !IsEditing;
 
         partial void OnSelectedChanged(Allotment? value)
         {
+              using var db =   _dbf.CreateDbContext();
+
             Lines.Clear();
             if (value != null)
             {
-                foreach (var l in _db.AllotmentRoomTypes.Include(x => x.RoomType)
+                foreach (var l in db.AllotmentRoomTypes.Include(x => x.RoomType)
                          .Where(x => x.AllotmentId == value.Id).AsNoTracking())
                     Lines.Add(l);
             }
@@ -75,13 +76,15 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task LoadAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             Hotels.Clear();
-            foreach (var h in await _db.Hotels.OrderBy(x => x.Name).ToListAsync()) Hotels.Add(h);
+            foreach (var h in await db.Hotels.OrderBy(x => x.Name).ToListAsync()) Hotels.Add(h);
 
             AllRoomTypes.Clear();
-            foreach (var rt in await _db.RoomTypes.OrderBy(x => x.Name).ToListAsync()) AllRoomTypes.Add(rt);
+            foreach (var rt in await db.RoomTypes.OrderBy(x => x.Name).ToListAsync()) AllRoomTypes.Add(rt);
 
-            var q = _db.Allotments.Include(a => a.Hotel).AsQueryable();
+            var q = db.Allotments.Include(a => a.Hotel).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(SearchText))
                 q = q.Where(a => a.Title.Contains(SearchText) || a.Hotel!.Name.Contains(SearchText));
@@ -129,6 +132,8 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task SaveAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             if (EditHotel == null || string.IsNullOrWhiteSpace(EditTitle) ||
                 EditStartDate == null || EditEndDate == null) return;
 
@@ -144,14 +149,14 @@ namespace TravelAgency.Desktop.ViewModels
                     Status = EditStatus ?? AllotmentStatus.Active,
                     Notes = EditNotes
                 };
-                _db.Allotments.Add(a);
-                await _db.SaveChangesAsync();
+                db.Allotments.Add(a);
+                await db.SaveChangesAsync();
 
                 // persist added lines
                 foreach (var l in Lines)
                 {
                     l.AllotmentId = a.Id;
-                    _db.AllotmentRoomTypes.Add(new AllotmentRoomType
+                    db.AllotmentRoomTypes.Add(new AllotmentRoomType
                     {
                         AllotmentId = a.Id,
                         RoomTypeId = l.RoomTypeId,
@@ -165,7 +170,7 @@ namespace TravelAgency.Desktop.ViewModels
             }
             else if (_editingId.HasValue)
             {
-                var a = await _db.Allotments.FirstAsync(x => x.Id == _editingId.Value);
+                var a = await db.Allotments.FirstAsync(x => x.Id == _editingId.Value);
                 a.Title = EditTitle!.Trim();
                 a.HotelId = EditHotel.Id;
                 a.StartDate = EditStartDate!.Value.Date;
@@ -175,11 +180,11 @@ namespace TravelAgency.Desktop.ViewModels
                 a.Notes = EditNotes;
 
                 // crude sync of lines: delete + re-add (OK for MVP)
-                var old = _db.AllotmentRoomTypes.Where(x => x.AllotmentId == a.Id);
-                _db.AllotmentRoomTypes.RemoveRange(old);
+                var old = db.AllotmentRoomTypes.Where(x => x.AllotmentId == a.Id);
+                db.AllotmentRoomTypes.RemoveRange(old);
                 foreach (var l in Lines)
                 {
-                    _db.AllotmentRoomTypes.Add(new AllotmentRoomType
+                    db.AllotmentRoomTypes.Add(new AllotmentRoomType
                     {
                         AllotmentId = a.Id,
                         RoomTypeId = l.RoomTypeId,
@@ -192,7 +197,7 @@ namespace TravelAgency.Desktop.ViewModels
                 }
             }
 
-            await _db.SaveChangesAsync();
+            await db.SaveChangesAsync();
             IsEditing = false;
             await LoadAsync();
         }
@@ -209,12 +214,14 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task DeleteAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             if (Selected == null) return;
             var id = Selected.Id;
-            var lines = _db.AllotmentRoomTypes.Where(x => x.AllotmentId == id);
-            _db.AllotmentRoomTypes.RemoveRange(lines);
-            _db.Allotments.Remove(await _db.Allotments.FirstAsync(x => x.Id == id));
-            await _db.SaveChangesAsync();
+            var lines = db.AllotmentRoomTypes.Where(x => x.AllotmentId == id);
+            db.AllotmentRoomTypes.RemoveRange(lines);
+            db.Allotments.Remove(await db.Allotments.FirstAsync(x => x.Id == id));
+            await db.SaveChangesAsync();
             await LoadAsync();
         }
 

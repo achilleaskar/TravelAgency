@@ -8,26 +8,26 @@ namespace TravelAgency.Desktop.Views
 {
     public partial class ReservationDetailsWindow : Window
     {
-        private readonly TravelAgencyDbContext _db;
+        private readonly TravelAgencyDbContext db;
         private readonly int _reservationId;
 
         public ReservationDetailsWindow(TravelAgencyDbContext db, int reservationId)
         {
             InitializeComponent();
-            _db = db; _reservationId = reservationId;
+            db = db; _reservationId = reservationId;
             _ = LoadAsync();
         }
 
         private async Task LoadAsync()
         {
-            var r = await _db.Reservations
+            var r = await db.Reservations
                 .Include(x => x.Customer)
                 .Include(x => x.Items)!.ThenInclude(i => i.AllotmentRoomType)!.ThenInclude(art => art!.Allotment)!.ThenInclude(a => a!.Hotel)!.ThenInclude(h => h!.City)
                 .Include(x => x.Payments)
                 .AsNoTracking()
                 .FirstAsync(x => x.Id == _reservationId);
 
-            var logs = await _db.UpdateLogs
+            var logs = await db.UpdateLogs
                 .Where(x => x.EntityType == "Reservation" && x.EntityId == _reservationId)
                 .OrderByDescending(x => x.ChangedAt).Take(100)
                 .AsNoTracking().ToListAsync();

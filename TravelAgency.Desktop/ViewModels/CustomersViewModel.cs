@@ -11,7 +11,8 @@ namespace TravelAgency.Desktop.ViewModels
 {
     public partial class CustomersViewModel : ObservableObject
     {
-        private readonly TravelAgencyDbContext _db;
+        private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
+        public CustomersViewModel(IDbContextFactory<TravelAgencyDbContext> dbf) => _dbf = dbf;
 
         public ObservableCollection<Customer> Items { get; } = new();
 
@@ -30,8 +31,7 @@ namespace TravelAgency.Desktop.ViewModels
 
         private bool _isNewMode;
         private int? _editingId;
-
-        public CustomersViewModel(TravelAgencyDbContext db) => _db = db;
+         
 
         public bool CanEdit => Selected != null && !IsEditing;
         public bool CanDelete => Selected != null && !IsEditing;
@@ -40,8 +40,10 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task LoadAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             Items.Clear();
-            var q = _db.Customers.AsQueryable();
+            var q = db.Customers.AsQueryable();
             if (!string.IsNullOrWhiteSpace(SearchText))
                 q = q.Where(c => c.Name.Contains(SearchText) || (c.Email ?? "").Contains(SearchText));
             foreach (var c in await q.AsNoTracking().OrderBy(c => c.Name).ToListAsync()) Items.Add(c);
@@ -68,12 +70,14 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task SaveAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             if (string.IsNullOrWhiteSpace(EditName)) return;
             if (!decimal.TryParse(EditOldBalance ?? "0", NumberStyles.Any, CultureInfo.InvariantCulture, out var ob)) ob = 0;
 
             if (_isNewMode)
             {
-                _db.Customers.Add(new Customer
+                db.Customers.Add(new Customer
                 {
                     Name = EditName!.Trim(),
                     Email = string.IsNullOrWhiteSpace(EditEmail) ? null : EditEmail!.Trim(),
@@ -84,7 +88,7 @@ namespace TravelAgency.Desktop.ViewModels
             }
             else if (_editingId.HasValue)
             {
-                var c = await _db.Customers.FirstAsync(x => x.Id == _editingId.Value);
+                var c = await db.Customers.FirstAsync(x => x.Id == _editingId.Value);
                 c.Name = EditName!.Trim();
                 c.Email = string.IsNullOrWhiteSpace(EditEmail) ? null : EditEmail!.Trim();
                 c.Phone = string.IsNullOrWhiteSpace(EditPhone) ? null : EditPhone!.Trim();
@@ -92,7 +96,7 @@ namespace TravelAgency.Desktop.ViewModels
                 c.Notes = EditNotes;
             }
 
-            await _db.SaveChangesAsync();
+            await db.SaveChangesAsync();
             IsEditing = false;
             await LoadAsync();
         }
@@ -108,10 +112,12 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task DeleteAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             if (Selected == null) return;
-            var c = await _db.Customers.FirstAsync(x => x.Id == Selected.Id);
-            _db.Customers.Remove(c);
-            await _db.SaveChangesAsync();
+            var c = await db.Customers.FirstAsync(x => x.Id == Selected.Id);
+            db.Customers.Remove(c);
+            await db.SaveChangesAsync();
             await LoadAsync();
         }
     }

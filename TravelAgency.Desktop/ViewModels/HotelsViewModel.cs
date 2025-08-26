@@ -10,7 +10,9 @@ namespace TravelAgency.Desktop.ViewModels
 {
     public partial class HotelsViewModel : ObservableObject
     {
-        private readonly TravelAgencyDbContext _db;
+        private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
+        public HotelsViewModel(IDbContextFactory<TravelAgencyDbContext> dbf) => _dbf = dbf;
+
 
         public ObservableCollection<Hotel> Items { get; } = new();
         public ObservableCollection<City> Cities { get; } = new();
@@ -31,8 +33,7 @@ namespace TravelAgency.Desktop.ViewModels
 
         private bool _isNewMode;
         private int? _editingId;
-
-        public HotelsViewModel(TravelAgencyDbContext db) => _db = db;
+         
 
         public bool CanEdit => Selected != null && !IsEditing;
         public bool CanDelete => Selected != null && !IsEditing;
@@ -41,11 +42,12 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task LoadAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
             Cities.Clear();
-            foreach (var c in await _db.Cities.OrderBy(x => x.Name).ToListAsync()) Cities.Add(c);
+            foreach (var c in await db.Cities.OrderBy(x => x.Name).ToListAsync()) Cities.Add(c);
 
             Items.Clear();
-            var q = _db.Hotels.Include(h => h.City).AsQueryable();
+            var q = db.Hotels.Include(h => h.City).AsQueryable();
             if (!string.IsNullOrWhiteSpace(SearchText))
                 q = q.Where(h => h.Name.Contains(SearchText) || h.City!.Name.Contains(SearchText));
             foreach (var h in await q.AsNoTracking().OrderBy(h => h.Name).ToListAsync()) Items.Add(h);
@@ -73,11 +75,13 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task SaveAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             if (string.IsNullOrWhiteSpace(EditName) || EditCity == null) return;
 
             if (_isNewMode)
             {
-                _db.Hotels.Add(new Hotel
+                db.Hotels.Add(new Hotel
                 {
                     Name = EditName!.Trim(),
                     CityId = EditCity.Id,
@@ -89,12 +93,12 @@ namespace TravelAgency.Desktop.ViewModels
             }
             else if (_editingId.HasValue)
             {
-                var h = await _db.Hotels.FirstAsync(x => x.Id == _editingId.Value);
+                var h = await db.Hotels.FirstAsync(x => x.Id == _editingId.Value);
                 h.Name = EditName!.Trim(); h.CityId = EditCity.Id;
                 h.Address = EditAddress; h.Phone = EditPhone; h.Email = EditEmail; h.Notes = EditNotes;
             }
 
-            await _db.SaveChangesAsync();
+            await db.SaveChangesAsync();
             IsEditing = false;
             await LoadAsync();
         }
@@ -110,9 +114,11 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task DeleteAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             if (Selected == null) return;
-            _db.Hotels.Remove(await _db.Hotels.FirstAsync(x => x.Id == Selected.Id));
-            await _db.SaveChangesAsync();
+            db.Hotels.Remove(await db.Hotels.FirstAsync(x => x.Id == Selected.Id));
+            await db.SaveChangesAsync();
             await LoadAsync();
         }
     }

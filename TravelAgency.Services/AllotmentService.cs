@@ -9,13 +9,13 @@ namespace TravelAgency.Services;
 
 public class AllotmentService
 {
-    private readonly TravelAgencyDbContext _db;
+    private readonly TravelAgencyDbContext db;
 
-    public AllotmentService(TravelAgencyDbContext db) => _db = db;
+    public AllotmentService(TravelAgencyDbContext db) => db = db;
 
     public Task<List<Allotment>> GetUpcomingAsync(DateTime from, DateTime to, int? cityId = null)
     {
-        var q = _db.Allotments
+        var q = db.Allotments
             .Include(a => a.Hotel)!.ThenInclude(h => h.City)
             .Include(a => a.RoomTypes)!.ThenInclude(rt => rt.RoomType)
             .Where(a => a.StartDate < to && a.EndDate > from);
@@ -25,8 +25,8 @@ public class AllotmentService
 
     public async Task<bool> ReserveRoomsAsync(int reservationId, int allotmentRoomTypeId, int qty)
     {
-        var art = await _db.AllotmentRoomTypes.Include(x => x.Allotment).FirstAsync(x => x.Id == allotmentRoomTypeId);
-        var reservedQty = await _db.ReservationItems
+        var art = await db.AllotmentRoomTypes.Include(x => x.Allotment).FirstAsync(x => x.Id == allotmentRoomTypeId);
+        var reservedQty = await db.ReservationItems
             .Where(x => x.AllotmentRoomTypeId == allotmentRoomTypeId && x.Reservation!.Status != ReservationStatus.Cancelled)
             .SumAsync(x => (int?)x.Qty) ?? 0;
         var available = art.Quantity - reservedQty;
@@ -43,17 +43,17 @@ public class AllotmentService
             StartDate = art.Allotment!.StartDate,
             EndDate = art.Allotment!.EndDate
         };
-        _db.ReservationItems.Add(item);
-        await _db.SaveChangesAsync();
+        db.ReservationItems.Add(item);
+        await db.SaveChangesAsync();
         return true;
     }
 }
 
 public class ReservationService
 {
-    private readonly TravelAgencyDbContext _db;
+    private readonly TravelAgencyDbContext db;
 
-    public ReservationService(TravelAgencyDbContext db) => _db = db;
+    public ReservationService(TravelAgencyDbContext db) => db = db;
 
     public async Task<Reservation> CreateAsync(int customerId, string title, DateTime start, DateTime end,
         DateTime? depositDue = null, DateTime? balanceDue = null)
@@ -68,16 +68,16 @@ public class ReservationService
             BalanceDueDate = balanceDue,
             Status = ReservationStatus.Draft
         };
-        _db.Reservations.Add(r);
-        await _db.SaveChangesAsync();
+        db.Reservations.Add(r);
+        await db.SaveChangesAsync();
         return r;
     }
 
     public async Task CancelAsync(int reservationId)
     {
-        var r = await _db.Reservations.FindAsync(reservationId) ?? throw new InvalidOperationException();
+        var r = await db.Reservations.FindAsync(reservationId) ?? throw new InvalidOperationException();
         r.Status = ReservationStatus.Cancelled;
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
     }
 }
 
@@ -93,13 +93,14 @@ public record AlertDto(
 
 public class AlertService
 {
-    private readonly TravelAgencyDbContext _db;
-
-    public AlertService(TravelAgencyDbContext db) => _db = db;
+    private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
+    public AlertService(IDbContextFactory<TravelAgencyDbContext> dbf) => _dbf = dbf;
 
     public async Task<bool> ReserveRoomsAsync(int reservationId, int allotmentRoomTypeId, int qty, CancellationToken ct = default)
     {
-        var strategy = _db.Database.CreateExecutionStrategy();
+        await using var db = await _dbf.CreateDbContextAsync();
+
+        var strategy = db.Database.CreateExecutionStrategy();
 
         return await strategy.ExecuteAsync(async () =>
         {
@@ -107,18 +108,18 @@ public class AlertService
             {
                 try
                 {
-                    await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+                    await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
 
                     // 1) Lock το row του AllotmentRoomType για να σειριοποιήσουμε τα concurrent checks
                     //    Χρησιμοποιούμε raw SQL ώστε να προσθέσουμε FOR UPDATE
-                    await _db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM `AllotmentRoomTypes` WHERE `Id` = {allotmentRoomTypeId} FOR UPDATE", ct);
+                    await db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM `AllotmentRoomTypes` WHERE `Id` = {allotmentRoomTypeId} FOR UPDATE", ct);
 
                     // 2) Φόρτωση entity + υπολογισμός τρεχουσών δεσμεύσεων *εντός του ίδιου transaction*
-                    var art = await _db.AllotmentRoomTypes
+                    var art = await db.AllotmentRoomTypes
                         .Include(x => x.Allotment)
                         .FirstAsync(x => x.Id == allotmentRoomTypeId, ct);
 
-                    var reservedQty = await _db.ReservationItems
+                    var reservedQty = await db.ReservationItems
                         .Where(x => x.AllotmentRoomTypeId == allotmentRoomTypeId && x.Reservation!.Status != ReservationStatus.Cancelled)
                         .SumAsync(x => (int?)x.Qty, ct) ?? 0;
 
@@ -130,7 +131,7 @@ public class AlertService
                     }
 
                     // 3) Δημιουργία item
-                    _db.ReservationItems.Add(new ReservationItem
+                    db.ReservationItems.Add(new ReservationItem
                     {
                         ReservationId = reservationId,
                         Kind = ReservationItemKind.AllotmentRoom,
@@ -142,7 +143,7 @@ public class AlertService
                         EndDate = art.Allotment!.EndDate
                     });
 
-                    await _db.SaveChangesAsync(ct);
+                    await db.SaveChangesAsync(ct);
                     await tx.CommitAsync(ct);
                     return true;
                 }
@@ -169,8 +170,10 @@ public class AlertService
     int? customerId = null,
     string? search = null)
     {
+        await using var db = await _dbf.CreateDbContextAsync();
+
         // Allotment option dues
-        var allotQ = _db.Allotments
+        var allotQ = db.Allotments
             .Include(a => a.Hotel)!.ThenInclude(h => h.City)
             .Where(a => a.OptionDueDate != null &&
                         a.OptionDueDate >= today &&
@@ -196,7 +199,7 @@ public class AlertService
             .ToListAsync();
 
         // Reservation deposit/balance dues
-        var resQ = _db.Reservations
+        var resQ = db.Reservations
             .Include(r => r.Customer)
             .Where(r => r.Status != ReservationStatus.Cancelled &&
                 ((r.DepositDueDate != null && r.DepositDueDate >= today && r.DepositDueDate <= today.AddDays(3)) ||
@@ -211,7 +214,7 @@ public class AlertService
         {
             resQ = resQ.Where(r => r.Items.Any(i =>
                 i.AllotmentRoomTypeId != null &&
-                _db.AllotmentRoomTypes
+                db.AllotmentRoomTypes
                     .Where(x => x.Id == i.AllotmentRoomTypeId)
                     .Any(x => (hotelId == null || x.Allotment!.HotelId == hotelId) &&
                               (country == null || x.Allotment!.Hotel!.City!.Country == country))));
