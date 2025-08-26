@@ -60,18 +60,45 @@ namespace TravelAgency.Desktop.ViewModels
 
         partial void OnSelectedChanged(Allotment? value)
         {
-              using var db =   _dbf.CreateDbContext();
-
             Lines.Clear();
             if (value != null)
             {
-                foreach (var l in db.AllotmentRoomTypes.Include(x => x.RoomType)
-                         .Where(x => x.AllotmentId == value.Id).AsNoTracking())
+                foreach (var l in _dbf.CreateDbContext().AllotmentRoomTypes
+                         .Include(x => x.RoomType)
+                         .Where(x => x.AllotmentId == value.Id)
+                         .AsNoTracking())
                     Lines.Add(l);
             }
+
             OnPropertyChanged(nameof(CanEdit));
             OnPropertyChanged(nameof(CanDelete));
+
+            if (value != null && IsEditing && _isNewMode)
+            {
+                _isNewMode = false;
+                _editingId = value.Id;
+
+                EditTitle = value.Title;
+                EditHotel = Hotels.FirstOrDefault(h => h.Id == value.HotelId);
+                EditStartDate = value.StartDate;
+                EditEndDate = value.EndDate;
+                EditOptionDue = value.OptionDueDate;
+                EditStatus = value.Status;
+                EditNotes = value.Notes;
+
+                // load existing lines into the editor collection
+                Lines.Clear();
+                foreach (var l in _dbf.CreateDbContext().AllotmentRoomTypes
+                         .Include(x => x.RoomType)
+                         .Where(x => x.AllotmentId == value.Id)
+                         .AsNoTracking())
+                    Lines.Add(l);
+
+                EditorTitle = $"Edit Allotment #{value.Id}";
+                EditorHint = "Modify fields and lines; click Save.";
+            }
         }
+
 
         [RelayCommand]
         private async Task LoadAsync()
@@ -103,7 +130,11 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private void BeginNew()
         {
-            _isNewMode = true; _editingId = null; IsEditing = true;
+            _isNewMode = true; 
+            _editingId = null; 
+            IsEditing = true;
+            Selected = null; // <-- deselect so a later click can switch to Edit mode
+
             EditTitle = ""; EditNotes = "";
             EditHotel = Hotels.FirstOrDefault();
             EditStartDate = DateTime.Today; EditEndDate = DateTime.Today.AddDays(3);
@@ -205,10 +236,48 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private void Cancel()
         {
-            IsEditing = false; _isNewMode = false; _editingId = null;
+            IsEditing = false;
+            _isNewMode = false;
+            _editingId = null;
+
+            // keep the current selection; just refresh the right pane
+            RefreshLinesForSelected();   // <- see helper below
+            ResetLineEditor();           // clear the small line editor fields
+
             EditorTitle = "Select a row and click Edit, or click Add New";
             EditorHint = "Use the grid on the left to select an allotment.";
-            if (Selected != null) OnSelectedChanged(Selected);
+
+            OnPropertyChanged(nameof(CanEdit));
+            OnPropertyChanged(nameof(CanDelete));
+        }
+
+        // Helper to repopulate the Lines collection for the current Selected allotment
+        private void RefreshLinesForSelected()
+        {
+            Lines.Clear();
+            if (Selected == null) return;
+
+            // use your context/factory pattern here
+            using var db = _dbf.CreateDbContext();      // or await using + async if you prefer
+            foreach (var l in db.AllotmentRoomTypes
+                     .Include(x => x.RoomType)
+                     .Where(x => x.AllotmentId == Selected.Id)
+                     .AsNoTracking())
+            {
+                Lines.Add(l);
+            }
+        }
+
+        // Helper to clear the mini line editor
+        private void ResetLineEditor()
+        {
+            LineRoomType = null;
+            LineQty = "0";
+            LinePrice = "0";
+            LineCurrency = "EUR";
+            LineSpecific = false;
+            LineCancelled = false;
+            SelectedLine = null;
         }
 
         [RelayCommand]

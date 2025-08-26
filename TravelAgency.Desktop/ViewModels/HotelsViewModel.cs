@@ -33,11 +33,33 @@ namespace TravelAgency.Desktop.ViewModels
 
         private bool _isNewMode;
         private int? _editingId;
-         
+
 
         public bool CanEdit => Selected != null && !IsEditing;
         public bool CanDelete => Selected != null && !IsEditing;
-        partial void OnSelectedChanged(Hotel? value) { OnPropertyChanged(nameof(CanEdit)); OnPropertyChanged(nameof(CanDelete)); }
+        partial void OnSelectedChanged(Hotel? value)
+        {
+            OnPropertyChanged(nameof(CanEdit));
+            OnPropertyChanged(nameof(CanDelete));
+
+            if (value != null && IsEditing && _isNewMode)
+            {
+                // switch from New → Edit, prefill editor from selection
+                _isNewMode = false;
+                _editingId = value.Id;
+
+                EditName = value.Name;
+                EditAddress = value.Address;
+                EditPhone = value.Phone;
+                EditEmail = value.Email;
+                EditNotes = value.Notes;
+                EditCity = Cities.FirstOrDefault(c => c.Id == value.CityId);
+
+                EditorTitle = $"Edit Hotel #{value.Id}";
+                EditorHint = "Change values and click Save.";
+            }
+        }
+
 
         [RelayCommand]
         private async Task LoadAsync()
@@ -57,6 +79,8 @@ namespace TravelAgency.Desktop.ViewModels
         private void BeginNew()
         {
             _isNewMode = true; _editingId = null; IsEditing = true;
+            Selected = null; // <-- deselect so a later click can switch to Edit mode
+
             EditName = ""; EditAddress = ""; EditPhone = ""; EditEmail = ""; EditNotes = "";
             EditCity = Cities.FirstOrDefault();
             EditorTitle = "Add New Hotel"; EditorHint = "Fill the fields and click Save.";

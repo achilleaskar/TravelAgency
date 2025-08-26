@@ -38,7 +38,20 @@ namespace TravelAgency.Desktop.ViewModels
         {
             OnPropertyChanged(nameof(CanEdit));
             OnPropertyChanged(nameof(CanDelete));
+
+            if (value != null && IsEditing && _isNewMode)
+            {
+                _isNewMode = false;
+                _editingId = value.Id;
+
+                EditCode = value.Code;
+                EditName = value.Name;
+
+                EditorTitle = $"Edit Room Type #{value.Id}";
+                EditorHint = "Change values and click Save.";
+            }
         }
+
 
         [RelayCommand]
         private async Task LoadAsync()
@@ -65,6 +78,8 @@ namespace TravelAgency.Desktop.ViewModels
             _isNewMode = true;
             _editingId = null;
             IsEditing = true;
+            Selected = null; // <-- deselect so a later click can switch to Edit mode
+
             EditCode = string.Empty;
             EditName = string.Empty;
             EditorTitle = "Add New Room Type";

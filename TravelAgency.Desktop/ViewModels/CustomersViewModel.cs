@@ -35,7 +35,26 @@ namespace TravelAgency.Desktop.ViewModels
 
         public bool CanEdit => Selected != null && !IsEditing;
         public bool CanDelete => Selected != null && !IsEditing;
-        partial void OnSelectedChanged(Customer? value) { OnPropertyChanged(nameof(CanEdit)); OnPropertyChanged(nameof(CanDelete)); }
+        partial void OnSelectedChanged(Customer? value)
+        {
+            OnPropertyChanged(nameof(CanEdit));
+            OnPropertyChanged(nameof(CanDelete));
+
+            if (value != null && IsEditing && _isNewMode)
+            {
+                _isNewMode = false;
+                _editingId = value.Id;
+
+                EditName = value.Name;
+                EditEmail = value.Email;
+                EditPhone = value.Phone;
+                EditOldBalance = value.OldBalance.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                EditNotes = value.Notes;
+
+                EditorTitle = $"Edit Customer #{value.Id}";
+                EditorHint = "Change values and click Save.";
+            }
+        }
 
         [RelayCommand]
         private async Task LoadAsync()
@@ -53,6 +72,8 @@ namespace TravelAgency.Desktop.ViewModels
         private void BeginNew()
         {
             _isNewMode = true; _editingId = null; IsEditing = true;
+            Selected = null; // <-- deselect so a later click can switch to Edit mode
+
             EditName = ""; EditEmail = ""; EditPhone = ""; EditOldBalance = "0";
             EditorTitle = "Add New Customer"; EditorHint = "Fill the fields and click Save.";
         }
