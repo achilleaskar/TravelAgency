@@ -78,13 +78,16 @@ namespace TravelAgency.Desktop.ViewModels
             _isNewMode = true;
             _editingId = null;
             IsEditing = true;
-            Selected = null; // <-- deselect so a later click can switch to Edit mode
 
-            EditCode = string.Empty;
-            EditName = string.Empty;
+            Selected = null;
+
+            EditCode = "";
+            EditName = "";
+
             EditorTitle = "Add New Room Type";
             EditorHint = "Fill the fields and click Save.";
         }
+
 
         [RelayCommand]
         private void BeginEdit()
@@ -128,9 +131,22 @@ namespace TravelAgency.Desktop.ViewModels
             IsEditing = false;
             _isNewMode = false;
             _editingId = null;
+
+            ResetEditorFields();
+
             EditorTitle = "Select a row and click Edit, or click Add New";
-            EditorHint = "Use the left list to select an item for editing.";
+            EditorHint = "Use the list on the left to select a room type.";
+
+            OnPropertyChanged(nameof(CanEdit));
+            OnPropertyChanged(nameof(CanDelete));
         }
+
+        private void ResetEditorFields()
+        {
+            EditCode = "";
+            EditName = "";
+        }
+
 
         [RelayCommand]
         private async Task DeleteAsync()

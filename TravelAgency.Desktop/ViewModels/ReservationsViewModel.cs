@@ -227,8 +227,28 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private void Cancel()
         {
-            Basket.Clear();
-            Title = ""; Notes = "";
+            // no edit/new flags here; just reset the composer form
+            ResetReservationForm();
         }
+
+        private void ResetReservationForm()
+        {
+            Title = "";
+            Notes = "";
+            SelectedCustomer = null;
+            ResFrom = DateTime.Today;
+            ResTo = DateTime.Today.AddDays(3);
+            DepositDue = null;
+            BalanceDue = null;
+
+            Basket.Clear();
+
+            // service subform
+            ServiceName = "";
+            ServiceQty = "1";
+            ServicePrice = "0";
+            ServiceCurrency = "EUR";
+        }
+
     }
 }

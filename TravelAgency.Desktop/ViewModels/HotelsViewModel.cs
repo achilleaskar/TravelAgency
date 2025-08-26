@@ -78,13 +78,23 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private void BeginNew()
         {
-            _isNewMode = true; _editingId = null; IsEditing = true;
-            Selected = null; // <-- deselect so a later click can switch to Edit mode
+            _isNewMode = true;
+            _editingId = null;
+            IsEditing = true;
 
-            EditName = ""; EditAddress = ""; EditPhone = ""; EditEmail = ""; EditNotes = "";
+            Selected = null; // allow next row click to switch to Edit mode
+
+            EditName = "";
+            EditAddress = "";
+            EditPhone = "";
+            EditEmail = "";
+            EditNotes = "";
             EditCity = Cities.FirstOrDefault();
-            EditorTitle = "Add New Hotel"; EditorHint = "Fill the fields and click Save.";
+
+            EditorTitle = "Add New Hotel";
+            EditorHint = "Fill the fields and click Save.";
         }
+
 
         [RelayCommand]
         private void BeginEdit()
@@ -130,10 +140,29 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private void Cancel()
         {
-            IsEditing = false; _isNewMode = false; _editingId = null;
+            IsEditing = false;
+            _isNewMode = false;
+            _editingId = null;
+
+            ResetEditorFields();
+
             EditorTitle = "Select a row and click Edit, or click Add New";
-            EditorHint = "Use the left list to select an item for editing.";
+            EditorHint = "Use the list on the left to select a hotel.";
+
+            OnPropertyChanged(nameof(CanEdit));
+            OnPropertyChanged(nameof(CanDelete));
         }
+
+        private void ResetEditorFields()
+        {
+            EditName = "";
+            EditAddress = "";
+            EditPhone = "";
+            EditEmail = "";
+            EditNotes = "";
+            EditCity = null;
+        }
+
 
         [RelayCommand]
         private async Task DeleteAsync()

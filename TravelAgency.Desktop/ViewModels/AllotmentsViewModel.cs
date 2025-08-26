@@ -130,19 +130,26 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private void BeginNew()
         {
-            _isNewMode = true; 
-            _editingId = null; 
+            _isNewMode = true;
+            _editingId = null;
             IsEditing = true;
-            Selected = null; // <-- deselect so a later click can switch to Edit mode
 
-            EditTitle = ""; EditNotes = "";
+            Selected = null;
+
+            EditTitle = "";
             EditHotel = Hotels.FirstOrDefault();
-            EditStartDate = DateTime.Today; EditEndDate = DateTime.Today.AddDays(3);
-            EditOptionDue = null; EditStatus = AllotmentStatus.Active;
+            EditStartDate = DateTime.Today;
+            EditEndDate = DateTime.Today.AddDays(3);
+            EditOptionDue = null;
+            EditStatus = AllotmentStatus.Active;
+            EditNotes = "";
+
+            Lines.Clear();
+
             EditorTitle = "Add New Allotment";
             EditorHint = "Fill the fields and add room-type lines below.";
-            Lines.Clear();
         }
+
 
         [RelayCommand]
         private void BeginEdit()
