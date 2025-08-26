@@ -13,56 +13,69 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Filters with labels -->
-        <StackPanel Orientation="Horizontal"
-                    Margin="0,0,0,8" >
-            <StackPanel.Resources>
-                <Style TargetType="Control">
-                    <Setter Property="Margin"
-                            Value="0,0,8,0" />
-                    <Setter Property="VerticalAlignment"
-                            Value="Center" />
-                </Style>
-            </StackPanel.Resources>
+        <!-- Filters -->
+        <Grid Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <!-- Label / Field pairs with small fixed gaps (12) to keep it tight -->
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="160" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
 
-            <StackPanel Style="{StaticResource FormRow}">
-                <TextBlock Text="Customer"
-                           Style="{StaticResource FormLabel}" />
-                <ComboBox Width="220"
-                          ItemsSource="{Binding Customers}"
-                          DisplayMemberPath="Name"
-                          SelectedItem="{Binding SelectedCustomer}" />
-            </StackPanel>
+            <!-- Customer -->
+            <TextBlock Grid.Column="0"
+                       Text="Customer"
+                       Style="{StaticResource FormLabel}" />
+            <ComboBox  Grid.Column="1"
+                       ItemsSource="{Binding Customers}"
+                       DisplayMemberPath="Name"
+                       SelectedItem="{Binding SelectedCustomer}"
+                       Style="{StaticResource FormControl}" />
 
-            <StackPanel Style="{StaticResource FormRow}">
-                <TextBlock Text="Country"
-                           Style="{StaticResource FormLabel}" />
-                <ComboBox Width="160"
-                          ItemsSource="{Binding Countries}"
-                          SelectedItem="{Binding SelectedCountry}" />
-            </StackPanel>
+            <!-- Country -->
+            <TextBlock Grid.Column="3"
+                       Text="Country"
+                       Style="{StaticResource FormLabel}" />
+            <ComboBox  Grid.Column="4"
+                       ItemsSource="{Binding Countries}"
+                       SelectedItem="{Binding SelectedCountry}"
+                       Style="{StaticResource FormControl}" />
 
-            <StackPanel Style="{StaticResource FormRow}">
-                <TextBlock Text="Hotel"
-                           Style="{StaticResource FormLabel}" />
-                <ComboBox Width="220"
-                          ItemsSource="{Binding Hotels}"
-                          DisplayMemberPath="Name"
-                          SelectedItem="{Binding SelectedHotel}" />
-            </StackPanel>
+            <!-- Hotel -->
+            <TextBlock Grid.Column="6"
+                       Text="Hotel"
+                       Style="{StaticResource FormLabel}" />
+            <ComboBox  Grid.Column="7"
+                       ItemsSource="{Binding Hotels}"
+                       DisplayMemberPath="Name"
+                       SelectedItem="{Binding SelectedHotel}"
+                       Style="{StaticResource FormControl}" />
 
-            <StackPanel Style="{StaticResource FormRow}">
-                <TextBlock Text="Search"
-                           Style="{StaticResource FormLabel}" />
-                <TextBox Width="220"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
-            </StackPanel>
+            <!-- Search -->
+            <TextBlock Grid.Column="9"
+                       Text="Search"
+                       Style="{StaticResource FormLabel}" />
+            <TextBox   Grid.Column="10"
+                       Width="220"
+                       Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                       Style="{StaticResource FormControl}" />
 
-            <Button Content="Refresh"
+            <!-- Refresh -->
+            <Button Grid.Column="12"
+                    Content="Refresh"
                     Command="{Binding RefreshCommand}"
-                    Margin="8,0,0,0" />
-        </StackPanel>
-
+                    Style="{StaticResource FormControl}" />
+        </Grid>
         <!-- Alerts grid (unchanged columns or include new ones if you added them) -->
         <DataGrid Grid.Row="1"
                   ItemsSource="{Binding Alerts}"
