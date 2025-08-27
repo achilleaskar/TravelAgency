@@ -9,24 +9,26 @@ using System.Threading.Tasks;
 using TravelAgency.Data;
 using TravelAgency.Domain.Entities;
 using TravelAgency.Domain.Enums;
+using TravelAgency.Services;
 
 namespace TravelAgency.Desktop.ViewModels
 {
     public partial class AllotmentsViewModel : ObservableObject
     {
         private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
-        public AllotmentsViewModel(IDbContextFactory<TravelAgencyDbContext> dbf) => _dbf = dbf;
+        private readonly LookupCacheService _cache;
 
         public ObservableCollection<Allotment> Allotments { get; } = new();
-        public ObservableCollection<Hotel> Hotels { get; } = new();
         public ObservableCollection<AllotmentRoomType> Lines { get; } = new();
-        public ObservableCollection<RoomType> AllRoomTypes { get; } = new();
+
+        // Filters (dropdowns from cache)
+        public ObservableCollection<Hotel> Hotels => _cache.Hotels;
+        public ObservableCollection<RoomType> AllRoomTypes => _cache.RoomTypes;
         public ObservableCollection<AllotmentStatus> Statuses { get; } = new(Enum.GetValues<AllotmentStatus>());
 
         [ObservableProperty] private Allotment? selected;
         [ObservableProperty] private AllotmentRoomType? selectedLine;
 
-        // Filters
         [ObservableProperty] private string? searchText;
         [ObservableProperty] private Hotel? filterHotel;
         [ObservableProperty] private AllotmentStatus? filterStatus;
@@ -55,24 +57,21 @@ namespace TravelAgency.Desktop.ViewModels
         private bool _isNewMode;
         private int? _editingId;
 
+        public AllotmentsViewModel(IDbContextFactory<TravelAgencyDbContext> dbf, LookupCacheService cache)
+        {
+            _dbf = dbf; _cache = cache;
+        }
+
         public bool CanEdit => Selected != null && !IsEditing;
         public bool CanDelete => Selected != null && !IsEditing;
 
         partial void OnSelectedChanged(Allotment? value)
         {
-            Lines.Clear();
-            if (value != null)
-            {
-                foreach (var l in _dbf.CreateDbContext().AllotmentRoomTypes
-                         .Include(x => x.RoomType)
-                         .Where(x => x.AllotmentId == value.Id)
-                         .AsNoTracking())
-                    Lines.Add(l);
-            }
-
             OnPropertyChanged(nameof(CanEdit));
             OnPropertyChanged(nameof(CanDelete));
+            RefreshLinesForSelected();
 
+            // If user started "Add New" then clicked a row, flip to edit mode
             if (value != null && IsEditing && _isNewMode)
             {
                 _isNewMode = false;
@@ -86,30 +85,40 @@ namespace TravelAgency.Desktop.ViewModels
                 EditStatus = value.Status;
                 EditNotes = value.Notes;
 
-                // load existing lines into the editor collection
-                Lines.Clear();
-                foreach (var l in _dbf.CreateDbContext().AllotmentRoomTypes
-                         .Include(x => x.RoomType)
-                         .Where(x => x.AllotmentId == value.Id)
-                         .AsNoTracking())
-                    Lines.Add(l);
-
                 EditorTitle = $"Edit Allotment #{value.Id}";
                 EditorHint = "Modify fields and lines; click Save.";
             }
         }
 
+        private void RefreshLinesForSelected()
+        {
+            Lines.Clear();
+            if (Selected == null) return;
+
+            using var db = _dbf.CreateDbContext();
+            var rows = db.AllotmentRoomTypes
+                         .Include(x => x.RoomType)
+                         .Where(x => x.AllotmentId == Selected.Id)
+                         .AsNoTracking()
+                         .ToList();
+            foreach (var l in rows) Lines.Add(l);
+        }
+
+        private void ResetLineEditor()
+        {
+            LineRoomType = null;
+            LineQty = "0";
+            LinePrice = "0";
+            LineCurrency = "EUR";
+            LineSpecific = false;
+            LineCancelled = false;
+            SelectedLine = null;
+        }
 
         [RelayCommand]
         private async Task LoadAsync()
         {
             await using var db = await _dbf.CreateDbContextAsync();
-
-            Hotels.Clear();
-            foreach (var h in await db.Hotels.OrderBy(x => x.Name).ToListAsync()) Hotels.Add(h);
-
-            AllRoomTypes.Clear();
-            foreach (var rt in await db.RoomTypes.OrderBy(x => x.Name).ToListAsync()) AllRoomTypes.Add(rt);
 
             var q = db.Allotments.Include(a => a.Hotel).AsQueryable();
 
@@ -122,40 +131,44 @@ namespace TravelAgency.Desktop.ViewModels
             if (FilterStatus != null)
                 q = q.Where(a => a.Status == FilterStatus);
 
+            var list = await q.AsNoTracking()
+                              .OrderByDescending(a => a.StartDate)
+                              .ToListAsync();
+
             Allotments.Clear();
-            foreach (var a in await q.AsNoTracking().OrderByDescending(a => a.StartDate).ToListAsync())
-                Allotments.Add(a);
+            foreach (var a in list) Allotments.Add(a);
+
+            // keep current lines in sync if a row is selected
+            if (Selected != null) RefreshLinesForSelected();
         }
 
         [RelayCommand]
         private void BeginNew()
         {
-            _isNewMode = true;
-            _editingId = null;
-            IsEditing = true;
+            _isNewMode = true; _editingId = null; IsEditing = true;
 
-            Selected = null;
-
-            EditTitle = "";
+            Selected = null; // allow a row click to switch to edit
+            EditTitle = ""; EditNotes = "";
             EditHotel = Hotels.FirstOrDefault();
             EditStartDate = DateTime.Today;
             EditEndDate = DateTime.Today.AddDays(3);
             EditOptionDue = null;
             EditStatus = AllotmentStatus.Active;
-            EditNotes = "";
 
             Lines.Clear();
+            ResetLineEditor();
 
             EditorTitle = "Add New Allotment";
             EditorHint = "Fill the fields and add room-type lines below.";
         }
 
-
         [RelayCommand]
         private void BeginEdit()
         {
             if (Selected == null) return;
+
             _isNewMode = false; _editingId = Selected.Id; IsEditing = true;
+
             EditTitle = Selected.Title;
             EditHotel = Hotels.FirstOrDefault(h => h.Id == Selected.HotelId);
             EditStartDate = Selected.StartDate;
@@ -163,17 +176,21 @@ namespace TravelAgency.Desktop.ViewModels
             EditOptionDue = Selected.OptionDueDate;
             EditStatus = Selected.Status;
             EditNotes = Selected.Notes;
+
+            RefreshLinesForSelected();
+            ResetLineEditor();
+
             EditorTitle = $"Edit Allotment #{Selected.Id}";
-            EditorHint = "Modify fields and lines; click Save when ready.";
+            EditorHint = "Modify fields and lines; click Save.";
         }
 
         [RelayCommand]
         private async Task SaveAsync()
         {
-            await using var db = await _dbf.CreateDbContextAsync();
-
             if (EditHotel == null || string.IsNullOrWhiteSpace(EditTitle) ||
                 EditStartDate == null || EditEndDate == null) return;
+
+            await using var db = await _dbf.CreateDbContextAsync();
 
             if (_isNewMode)
             {
@@ -190,10 +207,9 @@ namespace TravelAgency.Desktop.ViewModels
                 db.Allotments.Add(a);
                 await db.SaveChangesAsync();
 
-                // persist added lines
+                // persist lines
                 foreach (var l in Lines)
                 {
-                    l.AllotmentId = a.Id;
                     db.AllotmentRoomTypes.Add(new AllotmentRoomType
                     {
                         AllotmentId = a.Id,
@@ -205,6 +221,7 @@ namespace TravelAgency.Desktop.ViewModels
                         IsCancelled = l.IsCancelled
                     });
                 }
+                await db.SaveChangesAsync();
             }
             else if (_editingId.HasValue)
             {
@@ -214,10 +231,10 @@ namespace TravelAgency.Desktop.ViewModels
                 a.StartDate = EditStartDate!.Value.Date;
                 a.EndDate = EditEndDate!.Value.Date;
                 a.OptionDueDate = EditOptionDue;
-                a.Status = EditStatus ?? AllotmentStatus.Active;
+                a.Status = EditStatus ?? a.Status;
                 a.Notes = EditNotes;
 
-                // crude sync of lines: delete + re-add (OK for MVP)
+                // sync lines: delete & re-add (simple + safe for MVP)
                 var old = db.AllotmentRoomTypes.Where(x => x.AllotmentId == a.Id);
                 db.AllotmentRoomTypes.RemoveRange(old);
                 foreach (var l in Lines)
@@ -233,9 +250,9 @@ namespace TravelAgency.Desktop.ViewModels
                         IsCancelled = l.IsCancelled
                     });
                 }
+                await db.SaveChangesAsync();
             }
 
-            await db.SaveChangesAsync();
             IsEditing = false;
             await LoadAsync();
         }
@@ -247,9 +264,8 @@ namespace TravelAgency.Desktop.ViewModels
             _isNewMode = false;
             _editingId = null;
 
-            // keep the current selection; just refresh the right pane
-            RefreshLinesForSelected();   // <- see helper below
-            ResetLineEditor();           // clear the small line editor fields
+            RefreshLinesForSelected();
+            ResetLineEditor();
 
             EditorTitle = "Select a row and click Edit, or click Add New";
             EditorHint = "Use the grid on the left to select an allotment.";
@@ -258,56 +274,30 @@ namespace TravelAgency.Desktop.ViewModels
             OnPropertyChanged(nameof(CanDelete));
         }
 
-        // Helper to repopulate the Lines collection for the current Selected allotment
-        private void RefreshLinesForSelected()
-        {
-            Lines.Clear();
-            if (Selected == null) return;
-
-            // use your context/factory pattern here
-            using var db = _dbf.CreateDbContext();      // or await using + async if you prefer
-            foreach (var l in db.AllotmentRoomTypes
-                     .Include(x => x.RoomType)
-                     .Where(x => x.AllotmentId == Selected.Id)
-                     .AsNoTracking())
-            {
-                Lines.Add(l);
-            }
-        }
-
-        // Helper to clear the mini line editor
-        private void ResetLineEditor()
-        {
-            LineRoomType = null;
-            LineQty = "0";
-            LinePrice = "0";
-            LineCurrency = "EUR";
-            LineSpecific = false;
-            LineCancelled = false;
-            SelectedLine = null;
-        }
-
         [RelayCommand]
         private async Task DeleteAsync()
         {
+            if (Selected == null) return;
+
             await using var db = await _dbf.CreateDbContextAsync();
 
-            if (Selected == null) return;
-            var id = Selected.Id;
-            var lines = db.AllotmentRoomTypes.Where(x => x.AllotmentId == id);
+            var lines = db.AllotmentRoomTypes.Where(x => x.AllotmentId == Selected.Id);
             db.AllotmentRoomTypes.RemoveRange(lines);
-            db.Allotments.Remove(await db.Allotments.FirstAsync(x => x.Id == id));
+            var entity = await db.Allotments.FirstAsync(x => x.Id == Selected.Id);
+            db.Allotments.Remove(entity);
             await db.SaveChangesAsync();
+
             await LoadAsync();
         }
 
-        // Lines
+        // Lines commands
         [RelayCommand]
         private void UpsertLine()
         {
             if (LineRoomType == null) return;
             if (!int.TryParse(LineQty ?? "0", out var qty)) qty = 0;
-            if (!decimal.TryParse(LinePrice ?? "0", NumberStyles.Any, CultureInfo.InvariantCulture, out var price)) price = 0m;
+            if (!decimal.TryParse(LinePrice ?? "0", NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
+                price = 0m;
 
             if (SelectedLine == null)
             {
@@ -334,9 +324,7 @@ namespace TravelAgency.Desktop.ViewModels
                 OnPropertyChanged(nameof(Lines));
             }
 
-            // reset line editor
-            LineRoomType = null; LineQty = "0"; LinePrice = "0"; LineCurrency = "EUR";
-            LineSpecific = false; LineCancelled = false;
+            ResetLineEditor();
         }
 
         [RelayCommand]
@@ -344,6 +332,7 @@ namespace TravelAgency.Desktop.ViewModels
         {
             if (SelectedLine == null) return;
             Lines.Remove(SelectedLine);
+            ResetLineEditor();
         }
     }
 }
