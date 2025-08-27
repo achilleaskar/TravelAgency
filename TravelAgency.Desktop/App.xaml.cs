@@ -33,6 +33,7 @@ public partial class App : Application
                 services.AddScoped<AlertService>();
                 services.AddTransient<AllotmentsViewModel>();
                 services.AddTransient<ReservationsViewModel>();
+                services.AddTransient<CitiesViewModel>();
 
 
                 // ViewModels

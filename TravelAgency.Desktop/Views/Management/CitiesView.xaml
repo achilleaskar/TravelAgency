@@ -1,0 +1,141 @@
+﻿<UserControl x:Class="TravelAgency.Desktop.Views.CitiesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             Background="White"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel>
+        <!-- Toolbar -->
+        <Grid DockPanel.Dock="Top"
+              Margin="8,6,8,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Text="Search"
+                       Style="{StaticResource FormLabel}" />
+            <TextBox   Grid.Column="1"
+                       Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                       Style="{StaticResource FormControl}" />
+
+            <Button Grid.Column="3"
+                    Content="Load"
+                    Command="{Binding LoadCommand}"
+                    Style="{StaticResource FormControl}" />
+            <Button Grid.Column="5"
+                    Content="Add New"
+                    Command="{Binding BeginNewCommand}"
+                    Style="{StaticResource FormControl}" />
+            <Button Grid.Column="7"
+                    Content="Edit"
+                    Command="{Binding BeginEditCommand}"
+                    IsEnabled="{Binding CanEdit}"
+                    Style="{StaticResource FormControl}" />
+        </Grid>
+
+        <Grid Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="12" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Master -->
+            <DataGrid Grid.Column="0"
+                      ItemsSource="{Binding Items}"
+                      SelectedItem="{Binding Selected}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name"
+                                        Binding="{Binding Name}"
+                                        Width="200" />
+                    <DataGridTextColumn Header="Country"
+                                        Binding="{Binding Country}"
+                                        Width="180" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <GridSplitter Grid.Column="1"
+                          Width="12" />
+
+            <!-- Detail -->
+            <Border Grid.Column="2"
+                    Padding="12"
+                    BorderBrush="#DDD"
+                    BorderThickness="1"
+                    CornerRadius="6">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Grid.ColumnSpan="2"
+                               Text="{Binding EditorTitle}"
+                               FontSize="16"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,12" />
+
+                    <TextBlock Grid.Row="1"
+                               Grid.Column="0"
+                               Text="Name"
+                               FontWeight="SemiBold"
+                               Margin="0,0,8,8" />
+                    <TextBox   Grid.Row="1"
+                               Grid.Column="1"
+                               Text="{Binding EditName}"
+                               IsEnabled="{Binding IsEditing}"
+                               Margin="0,0,0,8" />
+
+                    <TextBlock Grid.Row="2"
+                               Grid.Column="0"
+                               Text="Country"
+                               FontWeight="SemiBold"
+                               Margin="0,0,8,8" />
+                    <TextBox   Grid.Row="2"
+                               Grid.Column="1"
+                               Text="{Binding EditCountry}"
+                               IsEnabled="{Binding IsEditing}"
+                               Margin="0,0,0,8" />
+
+                    <StackPanel Grid.Row="3"
+                                Grid.ColumnSpan="2"
+                                Orientation="Horizontal">
+                        <Button Content="Save"
+                                Command="{Binding SaveCommand}"
+                                IsEnabled="{Binding IsEditing}"
+                                Margin="0,0,8,0" />
+                        <Button Content="Cancel"
+                                Command="{Binding CancelCommand}"
+                                IsEnabled="{Binding IsEditing}"
+                                Margin="0,0,8,0" />
+                        <Button Content="Delete"
+                                Command="{Binding DeleteCommand}"
+                                IsEnabled="{Binding CanDelete}" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="4"
+                               Grid.ColumnSpan="2"
+                               Text="{Binding EditorHint}"
+                               Foreground="Gray"
+                               Margin="0,36,0,0" />
+                </Grid>
+            </Border>
+        </Grid>
+    </DockPanel>
+</UserControl>

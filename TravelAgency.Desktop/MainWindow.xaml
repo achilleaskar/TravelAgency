@@ -43,6 +43,9 @@
                     <TabItem Header="Customers">
                         <views:CustomersView />
                     </TabItem>
+                    <TabItem Header="Cities">
+                        <views:CitiesView />
+                    </TabItem>
                 </TabControl>
             </TabItem>
         </TabControl>
