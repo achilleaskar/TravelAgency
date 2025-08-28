@@ -42,7 +42,6 @@ public partial class App : Application
                     services.AddScoped<AlertService>();
 
                     // ViewModels
-                    services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ReservationsViewModel>();
                     services.AddTransient<ReservationEditorViewModel>();
                     services.AddTransient<AllotmentsViewModel>();
@@ -52,6 +51,7 @@ public partial class App : Application
                     services.AddTransient<CustomersViewModel>();
                     services.AddTransient<RoomTypesViewModel>();
                     services.AddTransient<CitiesViewModel>();
+                    services.AddTransient<DashboardViewModel>();
                 });
 
             HostRef = builder.Build();
