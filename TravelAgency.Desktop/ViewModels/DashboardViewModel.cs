@@ -1,19 +1,20 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.EntityFrameworkCore;
+﻿using System;
 using System.Collections.ObjectModel;
-using TravelAgency.Data;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;                           // <-- for Application.Current.Dispatcher
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using TravelAgency.Domain.Entities;
 using TravelAgency.Services;
 
-public partial class DashboardViewModel : ObservableObject
+public partial class DashboardViewModel : ObservableObject, IDisposable
 {
     private readonly AlertService _alerts;
-    private readonly IDbContextFactory<TravelAgencyDbContext> _dbf; 
+    private readonly LookupCacheService _cache;
 
-    public ObservableCollection<AlertDto> Alerts { get; } = new();
-    public ObservableCollection<Customer> Customers { get; } = new();
-    public ObservableCollection<Hotel> Hotels { get; } = new();
+    public ObservableCollection<Customer> Customers => _cache.Customers;
+    public ObservableCollection<Hotel> Hotels => _cache.Hotels;
     public ObservableCollection<string> Countries { get; } = new();
 
     [ObservableProperty] private Customer? selectedCustomer;
@@ -21,40 +22,68 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty] private string? selectedCountry;
     [ObservableProperty] private string? searchText;
 
-    public DashboardViewModel(AlertService alerts, IDbContextFactory<TravelAgencyDbContext> dbf)
+    public ObservableCollection<AlertDto> Alerts { get; } = new();
+
+    public DashboardViewModel(AlertService alerts, LookupCacheService cache)
     {
         _alerts = alerts;
-        _dbf = dbf;
-        _ = LoadFiltersAsync();
+        _cache = cache;
+
+        RebuildCountries();
+
+        // auto-refresh Countries when Cities change
+        _cache.Refreshed += OnCacheRefreshed;
+
         _ = RefreshAsync();
     }
 
-    private async Task LoadFiltersAsync()
+    private void OnCacheRefreshed(object? sender, EventArgs e)
     {
-        await using var db = await _dbf.CreateDbContextAsync();
+        void Work()
+        {
+            // Preserve current selection if still present
+            var prev = SelectedCountry;
+            RebuildCountries();
+            if (prev != null && Countries.Contains(prev)) SelectedCountry = prev;
+        }
 
-        Customers.Clear();
-        foreach (var c in await db.Customers.OrderBy(x => x.Name).ToListAsync()) Customers.Add(c);
+        var disp = Application.Current?.Dispatcher;
+        if (disp != null && !disp.CheckAccess()) disp.Invoke(Work);
+        else Work();
+    }
 
-        Hotels.Clear();
-        foreach (var h in await db.Hotels.OrderBy(x => x.Name).ToListAsync()) Hotels.Add(h);
-
+    private void RebuildCountries()
+    {
         Countries.Clear();
-        foreach (var country in await db.Cities.Select(x => x.Country).Distinct().OrderBy(x => x).ToListAsync())
-            Countries.Add(country);
+        foreach (var c in _cache.Cities
+                                .Select(x => x.Country)
+                                .Where(s => !string.IsNullOrWhiteSpace(s))
+                                .Distinct()
+                                .OrderBy(x => x))
+        {
+            Countries.Add(c);
+        }
     }
 
     [RelayCommand]
-    public async Task RefreshAsync()
+    private async Task RefreshAsync()
     {
         Alerts.Clear();
+
         var list = await _alerts.GetAlertsAsync(
-            DateTime.Today,
+            today: DateTime.Today,
             hotelId: SelectedHotel?.Id,
             country: SelectedCountry,
             customerId: SelectedCustomer?.Id,
-            search: SearchText
-        );
-        foreach (var a in list) Alerts.Add(a);
+            search: SearchText);
+
+        foreach (var a in list)
+            Alerts.Add(a);
+    }
+
+
+    public void Dispose()
+    {
+        _cache.Refreshed -= OnCacheRefreshed;
     }
 }

@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <ProjectReference Include="..\TravelAgency.Domain\TravelAgency.Domain.csproj" />
-    <ProjectReference Include="..\TravelAgency.Data\TravelAgency.Data.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\TravelAgency.Domain\TravelAgency.Domain.csproj" />
+		<ProjectReference Include="..\TravelAgency.Data\TravelAgency.Data.csproj" />
+	</ItemGroup>
 
-  <PropertyGroup>
+	<PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
 
 </Project>

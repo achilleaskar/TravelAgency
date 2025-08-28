@@ -59,9 +59,9 @@ namespace TravelAgency.Desktop.ViewModels
 
         public AllotmentsViewModel(IDbContextFactory<TravelAgencyDbContext> dbf, LookupCacheService cache)
         {
-            _dbf = dbf; _cache = cache;
+            _dbf = dbf;
+            _cache = cache;
         }
-
         public bool CanEdit => Selected != null && !IsEditing;
         public bool CanDelete => Selected != null && !IsEditing;
 

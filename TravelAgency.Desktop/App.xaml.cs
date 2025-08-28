@@ -28,6 +28,9 @@ public partial class App : Application
                     opt.UseMySql(cs, ServerVersion.AutoDetect(cs));
                 });
 
+                // Register the UI dispatcher (WPF)
+                services.AddSingleton<IUiDispatcher, Infrastructure.WpfUiDispatcher>();
+
                 // Lookup cache (shared)
                 services.AddSingleton<LookupCacheService>();
 
@@ -35,18 +38,15 @@ public partial class App : Application
                 services.AddScoped<AllotmentService>();
                 services.AddScoped<ReservationService>();
                 services.AddScoped<AlertService>();
-                services.AddTransient<AllotmentsViewModel>();
-                services.AddTransient<ReservationsViewModel>();
-                services.AddTransient<CitiesViewModel>();
-
 
                 // ViewModels
-                services.AddSingleton<MainViewModel>();
-                services.AddTransient<PlanViewModel>();
-                services.AddTransient<RoomTypesViewModel>();
+                services.AddTransient<DashboardViewModel>();
+                services.AddTransient<ReservationsViewModel>();
+                services.AddTransient<AllotmentsViewModel>();
                 services.AddTransient<HotelsViewModel>();
                 services.AddTransient<CustomersViewModel>();
-
+                services.AddTransient<RoomTypesViewModel>();
+                services.AddTransient<CitiesViewModel>();
             })
             .Build();
 
