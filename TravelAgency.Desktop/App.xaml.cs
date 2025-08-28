@@ -59,8 +59,18 @@ public partial class App : Application
             main.Show();
 
             // now warm the cache (UI is up; if DB is slow you'll still see the app)
+            // Warm the cache in background; if it faults, show a dialog
             var cache = HostRef.Services.GetRequiredService<LookupCacheService>();
-            cache.WarmUpAsync().GetAwaiter().GetResult();
+            _ = Task.Run(async () =>
+            {
+                try { await cache.WarmUpAsync().ConfigureAwait(false); }
+                catch (Exception ex)
+                {
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                        MessageBox.Show(ex.ToString(), "Cache warm-up failed",
+                            MessageBoxButton.OK, MessageBoxImage.Error));
+                }
+            });
         }
         catch (Exception ex)
         {
