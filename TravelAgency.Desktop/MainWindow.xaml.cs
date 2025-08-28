@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System.Windows;
+using TravelAgency.Desktop.ViewModels;
 
 namespace TravelAgency.Desktop;
 
@@ -9,6 +11,6 @@ public partial class MainWindow : Window
 {
     public MainWindow()
     {
-        InitializeComponent();
+        InitializeComponent(); DataContext = App.HostRef!.Services.GetRequiredService<MainViewModel>();
     }
 }

@@ -8,7 +8,7 @@ namespace TravelAgency.Desktop.Infrastructure
         public void Invoke(Action action)
         {
             var disp = Application.Current?.Dispatcher;
-            if (disp == null) { action(); return; }
+            if (disp == null) { action(); return; }         // no UI yet: just run
             if (disp.CheckAccess()) action();
             else disp.Invoke(action);
         }
@@ -16,7 +16,7 @@ namespace TravelAgency.Desktop.Infrastructure
         public bool CheckAccess()
         {
             var disp = Application.Current?.Dispatcher;
-            return disp?.CheckAccess() ?? true; // if no UI, treat as true
+            return disp?.CheckAccess() ?? false;            // <- important: treat no UI as false
         }
     }
 }

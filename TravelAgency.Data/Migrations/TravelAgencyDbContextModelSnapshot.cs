@@ -71,7 +71,7 @@ namespace TravelAgency.Data.Migrations
 
                     b.HasIndex("OptionDueDate");
 
-                    b.ToTable("Allotments");
+                    b.ToTable("Allotments", (string)null);
                 });
 
             modelBuilder.Entity("TravelAgency.Domain.Entities.AllotmentRoomType", b =>
@@ -120,7 +120,7 @@ namespace TravelAgency.Data.Migrations
                     b.HasIndex("AllotmentId", "RoomTypeId")
                         .IsUnique();
 
-                    b.ToTable("AllotmentRoomTypes");
+                    b.ToTable("AllotmentRoomTypes", (string)null);
                 });
 
             modelBuilder.Entity("TravelAgency.Domain.Entities.City", b =>
@@ -146,7 +146,7 @@ namespace TravelAgency.Data.Migrations
                     b.HasIndex("Name", "Country")
                         .IsUnique();
 
-                    b.ToTable("Cities");
+                    b.ToTable("Cities", (string)null);
                 });
 
             modelBuilder.Entity("TravelAgency.Domain.Entities.Customer", b =>
@@ -187,7 +187,7 @@ namespace TravelAgency.Data.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("Customers");
+                    b.ToTable("Customers", (string)null);
                 });
 
             modelBuilder.Entity("TravelAgency.Domain.Entities.Hotel", b =>
@@ -234,7 +234,7 @@ namespace TravelAgency.Data.Migrations
 
                     b.HasIndex("Name", "CityId");
 
-                    b.ToTable("Hotels");
+                    b.ToTable("Hotels", (string)null);
                 });
 
             modelBuilder.Entity("TravelAgency.Domain.Entities.Payment", b =>
@@ -267,7 +267,7 @@ namespace TravelAgency.Data.Migrations
 
                     b.HasIndex("ReservationId");
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("TravelAgency.Domain.Entities.Reservation", b =>
@@ -324,7 +324,7 @@ namespace TravelAgency.Data.Migrations
 
                     b.HasIndex("DepositDueDate");
 
-                    b.ToTable("Reservations");
+                    b.ToTable("Reservations", (string)null);
                 });
 
             modelBuilder.Entity("TravelAgency.Domain.Entities.ReservationItem", b =>
@@ -380,7 +380,7 @@ namespace TravelAgency.Data.Migrations
 
                     b.HasIndex("ReservationId");
 
-                    b.ToTable("ReservationItems");
+                    b.ToTable("ReservationItems", (string)null);
                 });
 
             modelBuilder.Entity("TravelAgency.Domain.Entities.RoomType", b =>
@@ -406,7 +406,7 @@ namespace TravelAgency.Data.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("RoomTypes");
+                    b.ToTable("RoomTypes", (string)null);
                 });
 
             modelBuilder.Entity("TravelAgency.Domain.Entities.UpdateLog", b =>
@@ -467,7 +467,7 @@ namespace TravelAgency.Data.Migrations
 
                     b.HasIndex("EntityType", "EntityId", "ChangedAt");
 
-                    b.ToTable("UpdateLogs");
+                    b.ToTable("UpdateLogs", (string)null);
                 });
 
             modelBuilder.Entity("TravelAgency.Domain.Entities.Allotment", b =>

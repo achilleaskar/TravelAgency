@@ -37,26 +37,56 @@ namespace TravelAgency.Services
 
         public async Task RefreshAsync()
         {
-            await using var db = await _dbf.CreateDbContextAsync();
-
-            // Fetch on background thread
-            var hotels = await db.Hotels.Include(x => x.City).AsNoTracking().OrderBy(x => x.Name).ToListAsync();
-            var customers = await db.Customers.AsNoTracking().OrderBy(x => x.Name).ToListAsync();
-            var cities = await db.Cities.AsNoTracking().OrderBy(x => x.Name).ToListAsync();
-            var roomTypes = await db.RoomTypes.AsNoTracking().OrderBy(x => x.Name).ToListAsync();
-
-            void Apply()
+            try
             {
-                Hotels.Clear(); foreach (var h in hotels) Hotels.Add(h);
-                Customers.Clear(); foreach (var c in customers) Customers.Add(c);
-                Cities.Clear(); foreach (var ci in cities) Cities.Add(ci);
-                RoomTypes.Clear(); foreach (var rt in roomTypes) RoomTypes.Add(rt);
+                // small safety timeout so we don't hang forever
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
 
-                Refreshed?.Invoke(this, EventArgs.Empty);
+                await using var db = await _dbf.CreateDbContextAsync(cts.Token);
+
+                // One pass per list; all AsNoTracking and ordered
+                var hotels = await db.Hotels.Include(x => x.City)
+                                            .AsNoTracking()
+                                            .OrderBy(x => x.Name)
+                                            .ToListAsync(cts.Token);
+
+                var customers = await db.Customers
+                                        .AsNoTracking()
+                                        .OrderBy(x => x.Name)
+                                        .ToListAsync(cts.Token);
+
+                var cities = await db.Cities
+                                     .AsNoTracking()
+                                     .OrderBy(x => x.Name)
+                                     .ToListAsync(cts.Token);
+
+                var roomTypes = await db.RoomTypes
+                                        .AsNoTracking()
+                                        .OrderBy(x => x.Name)
+                                        .ToListAsync(cts.Token);
+
+                void Apply()
+                {
+                    Hotels.Clear(); foreach (var h in hotels) Hotels.Add(h);
+                    Customers.Clear(); foreach (var c in customers) Customers.Add(c);
+                    Cities.Clear(); foreach (var ci in cities) Cities.Add(ci);
+                    RoomTypes.Clear(); foreach (var rt in roomTypes) RoomTypes.Add(rt);
+
+                    Refreshed?.Invoke(this, EventArgs.Empty);
+                }
+
+                if (!_ui.CheckAccess()) _ui.Invoke(Apply);
+                else Apply();
             }
+            catch (Exception ex)
+            {
+                // log to console for now (you can switch to Serilog or show a MessageBox)
+                Console.Error.WriteLine($"LookupCacheService.RefreshAsync failed: {ex}");
 
-            if (!_ui.CheckAccess()) _ui.Invoke(Apply);
-            else Apply();
+                // rethrow or swallow depending on your tolerance
+                throw;
+            }
         }
+
     }
 }
