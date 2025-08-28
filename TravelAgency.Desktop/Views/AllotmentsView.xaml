@@ -1,10 +1,9 @@
 ﻿<UserControl x:Class="TravelAgency.Desktop.Views.AllotmentsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-
+            Background="White" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <DockPanel>
 
-        <!-- Toolbar (labeled & compact) -->
+        <!-- Toolbar -->
         <Grid DockPanel.Dock="Top"
               Margin="8,6,8,6">
             <Grid.ColumnDefinitions>
@@ -50,7 +49,7 @@
                     Style="{StaticResource FormControl}" />
         </Grid>
 
-        <!-- Master/Detail -->
+        <!-- Master / Detail -->
         <Grid Margin="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -58,28 +57,45 @@
                 <ColumnDefinition Width="2*" />
             </Grid.ColumnDefinitions>
 
-            <!-- Master list (shows Hotel column clearly) -->
             <DataGrid Grid.Column="0"
                       ItemsSource="{Binding Allotments}"
                       SelectedItem="{Binding Selected}"
                       AutoGenerateColumns="False"
                       IsReadOnly="True">
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <!-- grey out exhausted allotments -->
+                            <DataTrigger Binding="{Binding RemainingTotal}"
+                                         Value="0">
+                                <Setter Property="Opacity"
+                                        Value="0.6" />
+                                <Setter Property="Foreground"
+                                        Value="Gray" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Title"
                                         Binding="{Binding Title}"
                                         Width="*" />
                     <DataGridTextColumn Header="Hotel"
-                                        Binding="{Binding Hotel.Name}"
+                                        Binding="{Binding HotelName}"
                                         Width="220" />
                     <DataGridTextColumn Header="Start"
                                         Binding="{Binding StartDate, StringFormat=dd/MM/yyyy}"
                                         Width="110" />
                     <DataGridTextColumn Header="End"
-                                        Binding="{Binding EndDate, StringFormat=dd/MM/yyyy}"
+                                        Binding="{Binding EndDate,   StringFormat=dd/MM/yyyy}"
                                         Width="110" />
                     <DataGridTextColumn Header="Option"
                                         Binding="{Binding OptionDueDate, StringFormat=dd/MM/yyyy}"
                                         Width="110" />
+                    <DataGridTextColumn Header="Remain"
+                                        Binding="{Binding RemainingTotal}"
+                                        Width="90" />
                     <DataGridTextColumn Header="Status"
                                         Binding="{Binding Status}"
                                         Width="120" />
@@ -112,7 +128,7 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
 
-                    <!-- Header + actions -->
+                    <!-- Actions -->
                     <StackPanel Grid.Row="0"
                                 Grid.ColumnSpan="2"
                                 Orientation="Horizontal"
@@ -145,7 +161,7 @@
                                FontWeight="SemiBold"
                                Margin="0,0,0,12" />
 
-                    <!-- Fields (aligned grid) -->
+                    <!-- Fields -->
                     <TextBlock Grid.Row="2"
                                Grid.Column="0"
                                Text="Title"
@@ -228,60 +244,54 @@
                                 Grid.ColumnSpan="2">
                         <TextBlock Text="Room Types / Lines"
                                    FontWeight="SemiBold"
-                                   Margin="0,0,0,4" />
+                                   Margin="0,0,0,6" />
 
                         <DataGrid ItemsSource="{Binding Lines}"
                                   SelectedItem="{Binding SelectedLine}"
                                   AutoGenerateColumns="False"
                                   CanUserAddRows="False"
                                   IsReadOnly="True"
-                                  Height="220"
-                                  Margin="0,0,0,6">
+                                  Height="240"
+                                  Margin="0,0,0,8">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Room Type"
                                                     Binding="{Binding RoomType.Name}"
                                                     Width="*" />
-                                <DataGridTextColumn Header="Qty"
-                                                    Binding="{Binding Quantity}"
+                                <DataGridTextColumn Header="Total"
+                                                    Binding="{Binding QuantityTotal}"
                                                     Width="80" />
-                                <DataGridTextColumn Header="Price/Night"
-                                                    Binding="{Binding PricePerNight, StringFormat={}{0:0.##}}"
-                                                    Width="120" />
-                                <DataGridTextColumn Header="Currency"
-                                                    Binding="{Binding Currency}"
+                                <DataGridTextColumn Header="Sold"
+                                                    Binding="{Binding Sold}"
+                                                    Width="80" />
+                                <DataGridTextColumn Header="Cancelled"
+                                                    Binding="{Binding QuantityCancelled}"
+                                                    Width="100" />
+                                <DataGridTextColumn Header="Remain"
+                                                    Binding="{Binding Remaining}"
                                                     Width="90" />
-                                <DataGridCheckBoxColumn Header="Specific"
-                                                        Binding="{Binding IsSpecific}"
-                                                        Width="90" />
-                                <DataGridCheckBoxColumn Header="Cancelled"
-                                                        Binding="{Binding IsCancelled}"
-                                                        Width="90" />
+                                <DataGridTextColumn Header="Price/N"
+                                                    Binding="{Binding PricePerNight, StringFormat={}{0:0.##}}"
+                                                    Width="100" />
+                                <DataGridTextColumn Header="Curr."
+                                                    Binding="{Binding Currency}"
+                                                    Width="70" />
                             </DataGrid.Columns>
                         </DataGrid>
 
-                        <!-- Labeled line editor -->
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
+                        <!-- Line editor -->
+                        <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="200" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="80" />
+                                <ColumnDefinition Width="220" />
                                 <ColumnDefinition Width="12" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="100" />
                                 <ColumnDefinition Width="12" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="80" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="12" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <TextBlock Grid.Column="0"
@@ -294,14 +304,14 @@
                                        IsEnabled="{Binding IsEditing}" />
 
                             <TextBlock Grid.Column="3"
-                                       Text="Qty"
+                                       Text="Total Qty"
                                        Style="{StaticResource FormLabel}" />
                             <TextBox   Grid.Column="4"
-                                       Text="{Binding LineQty}"
+                                       Text="{Binding LineTotalQty}"
                                        IsEnabled="{Binding IsEditing}" />
 
                             <TextBlock Grid.Column="6"
-                                       Text="Price"
+                                       Text="Price/Night"
                                        Style="{StaticResource FormLabel}" />
                             <TextBox   Grid.Column="7"
                                        Text="{Binding LinePrice}"
@@ -313,30 +323,48 @@
                             <TextBox   Grid.Column="10"
                                        Text="{Binding LineCurrency}"
                                        IsEnabled="{Binding IsEditing}" />
-
-                            <TextBlock Grid.Column="12"
-                                       Text="Specific"
-                                       Style="{StaticResource FormLabel}" />
-                            <CheckBox  Grid.Column="13"
-                                       IsChecked="{Binding LineSpecific}"
-                                       IsEnabled="{Binding IsEditing}" />
-
-                            <TextBlock Grid.Column="15"
-                                       Text="Cancelled"
-                                       Style="{StaticResource FormLabel}" />
-                            <CheckBox  Grid.Column="16"
-                                       IsChecked="{Binding LineCancelled}"
-                                       IsEnabled="{Binding IsEditing}" />
                         </Grid>
 
                         <StackPanel Orientation="Horizontal"
-                                    Margin="0,8,0,0">
+                                    Margin="0,0,0,8">
                             <Button Content="Add / Update Line"
                                     Command="{Binding UpsertLineCommand}"
                                     IsEnabled="{Binding IsEditing}"
                                     Style="{StaticResource FormControl}" />
                             <Button Content="Remove Line"
                                     Command="{Binding RemoveLineCommand}"
+                                    IsEnabled="{Binding IsEditing}"
+                                    Style="{StaticResource FormControl}"
+                                    Margin="8,0,0,0" />
+                        </StackPanel>
+
+                        <!-- Cancel units -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="100" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Grid.Column="0"
+                                       Text="Cancel units"
+                                       Style="{StaticResource FormLabel}" />
+                            <TextBox   Grid.Column="1"
+                                       Text="{Binding LineCancelQty}"
+                                       IsEnabled="{Binding IsEditing}" />
+
+                            <Button Grid.Column="3"
+                                    Content="Cancel N"
+                                    Command="{Binding CancelUnitsCommand}"
+                                    IsEnabled="{Binding IsEditing}"
+                                    Style="{StaticResource FormControl}" />
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,8,0,0">
+                            <Button Content="Cancel Remaining"
+                                    Command="{Binding CancelRemainingCommand}"
                                     IsEnabled="{Binding IsEditing}"
                                     Style="{StaticResource FormControl}" />
                         </StackPanel>

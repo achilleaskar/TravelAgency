@@ -58,31 +58,56 @@ namespace TravelAgency.Desktop.ViewModels
         {
             await using var db = await _dbf.CreateDbContextAsync();
 
-            var q = db.Allotments
-                      .Include(a => a.Hotel)
-                      .ThenInclude(h => h.City)
-                      .AsQueryable();
+            // Build base query for lines with hotel/city etc.
+            var lines = db.AllotmentRoomTypes
+                          .Include(l => l.RoomType)
+                          .Include(l => l.Allotment)
+                            .ThenInclude(a => a.Hotel)
+                              .ThenInclude(h => h.City)
+                          .AsQueryable();
+
+            // Filter by date window at the Allotment level
+            lines = lines.Where(l => l.Allotment.EndDate >= FromDate && l.Allotment.StartDate <= ToDate);
 
             if (SelectedCity != null)
-                q = q.Where(a => a.Hotel!.CityId == SelectedCity.Id);
+                lines = lines.Where(l => l.Allotment.Hotel!.CityId == SelectedCity.Id);
 
-            q = q.Where(a => a.EndDate >= FromDate && a.StartDate <= ToDate);
+            // Join to reservation items (exclude cancelled reservations) to compute Sold per line
+            var lineWithSold = from l in lines
+                               join ri in db.ReservationItems.Include(x => x.Reservation)
+                                    on l.Id equals ri.AllotmentRoomTypeId into g
+                               select new
+                               {
+                                   Line = l,
+                                   Sold = g.Where(x => x.Reservation.Status != ReservationStatus.Cancelled)
+                                           .Sum(x => (int?)x.Qty) ?? 0
+                               };
 
-            var list = await q.AsNoTracking()
-                              .OrderBy(a => a.StartDate)
-                              .Select(a => new AvailableAllotmentDto
-                              {
-                                  AllotmentId = a.Id,
-                                  Title = a.Title,
-                                  HotelName = a.Hotel!.Name,
-                                  StartDate = a.StartDate,
-                                  EndDate = a.EndDate
-                              })
-                              .ToListAsync();
+            // Keep only lines with Remaining > 0
+            var availableLines = await lineWithSold
+                .Where(x => (x.Line.QuantityTotal - x.Line.QuantityCancelled - x.Sold) > 0)
+                .AsNoTracking()
+                .ToListAsync();
+
+            // Group back to Allotments, compute RemainingTotal per allotment
+            var grouped = availableLines
+                .GroupBy(x => x.Line.Allotment)
+                .Select(g => new AvailableAllotmentDto
+                {
+                    AllotmentId = g.Key.Id,
+                    Title = g.Key.Title,
+                    HotelName = g.Key.Hotel!.Name,
+                    StartDate = g.Key.StartDate,
+                    EndDate = g.Key.EndDate,
+                    RemainingTotal = g.Sum(x => x.Line.QuantityTotal - x.Line.QuantityCancelled - x.Sold)
+                })
+                .OrderBy(x => x.StartDate)
+                .ToList();
 
             Available.Clear();
-            foreach (var it in list) Available.Add(it);
+            foreach (var it in grouped) Available.Add(it);
         }
+
 
         [RelayCommand]
         private void AddServiceLine()

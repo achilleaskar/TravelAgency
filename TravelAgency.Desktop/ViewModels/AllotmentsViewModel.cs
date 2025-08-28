@@ -1,11 +1,11 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Microsoft.EntityFrameworkCore;
 using TravelAgency.Data;
 using TravelAgency.Domain.Entities;
 using TravelAgency.Domain.Enums;
@@ -18,16 +18,20 @@ namespace TravelAgency.Desktop.ViewModels
         private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
         private readonly LookupCacheService _cache;
 
-        public ObservableCollection<Allotment> Allotments { get; } = new();
-        public ObservableCollection<AllotmentRoomType> Lines { get; } = new();
+        public ObservableCollection<AllotmentRow> Allotments { get; } = new();
 
-        // Filters (dropdowns from cache)
+        // Lines displayed in UI (projection with Sold/Remaining)
+        public ObservableCollection<LineRow> Lines { get; } = new();
+
+        // Filters
         public ObservableCollection<Hotel> Hotels => _cache.Hotels;
         public ObservableCollection<RoomType> AllRoomTypes => _cache.RoomTypes;
         public ObservableCollection<AllotmentStatus> Statuses { get; } = new(Enum.GetValues<AllotmentStatus>());
 
-        [ObservableProperty] private Allotment? selected;
-        [ObservableProperty] private AllotmentRoomType? selectedLine;
+        [ObservableProperty] private AllotmentRow? selected;
+        public bool CanEdit => Selected != null && !IsEditing;
+        public bool CanDelete => Selected != null && !IsEditing;
+        [ObservableProperty] private LineRow? selectedLine;
 
         [ObservableProperty] private string? searchText;
         [ObservableProperty] private Hotel? filterHotel;
@@ -46,32 +50,29 @@ namespace TravelAgency.Desktop.ViewModels
         [ObservableProperty] private AllotmentStatus? editStatus = AllotmentStatus.Active;
         [ObservableProperty] private string? editNotes;
 
-        // Line editor
+        // Line editor (create/update)
         [ObservableProperty] private RoomType? lineRoomType;
-        [ObservableProperty] private string? lineQty = "0";
+        [ObservableProperty] private string? lineTotalQty = "0";
         [ObservableProperty] private string? linePrice = "0";
         [ObservableProperty] private string? lineCurrency = "EUR";
-        [ObservableProperty] private bool lineSpecific;
-        [ObservableProperty] private bool lineCancelled;
+
+        // Cancel units input
+        [ObservableProperty] private string? lineCancelQty;
 
         private bool _isNewMode;
         private int? _editingId;
 
         public AllotmentsViewModel(IDbContextFactory<TravelAgencyDbContext> dbf, LookupCacheService cache)
         {
-            _dbf = dbf;
-            _cache = cache;
+            _dbf = dbf; _cache = cache;
         }
-        public bool CanEdit => Selected != null && !IsEditing;
-        public bool CanDelete => Selected != null && !IsEditing;
 
-        partial void OnSelectedChanged(Allotment? value)
+        partial void OnSelectedChanged(AllotmentRow? value)
         {
             OnPropertyChanged(nameof(CanEdit));
             OnPropertyChanged(nameof(CanDelete));
             RefreshLinesForSelected();
 
-            // If user started "Add New" then clicked a row, flip to edit mode
             if (value != null && IsEditing && _isNewMode)
             {
                 _isNewMode = false;
@@ -83,62 +84,82 @@ namespace TravelAgency.Desktop.ViewModels
                 EditEndDate = value.EndDate;
                 EditOptionDue = value.OptionDueDate;
                 EditStatus = value.Status;
-                EditNotes = value.Notes;
+                EditNotes = value.Notes;   // see step 3
 
                 EditorTitle = $"Edit Allotment #{value.Id}";
                 EditorHint = "Modify fields and lines; click Save.";
             }
         }
 
-        private void RefreshLinesForSelected()
-        {
-            Lines.Clear();
-            if (Selected == null) return;
-
-            using var db = _dbf.CreateDbContext();
-            var rows = db.AllotmentRoomTypes
-                         .Include(x => x.RoomType)
-                         .Where(x => x.AllotmentId == Selected.Id)
-                         .AsNoTracking()
-                         .ToList();
-            foreach (var l in rows) Lines.Add(l);
-        }
-
-        private void ResetLineEditor()
-        {
-            LineRoomType = null;
-            LineQty = "0";
-            LinePrice = "0";
-            LineCurrency = "EUR";
-            LineSpecific = false;
-            LineCancelled = false;
-            SelectedLine = null;
-        }
 
         [RelayCommand]
         private async Task LoadAsync()
         {
             await using var db = await _dbf.CreateDbContextAsync();
 
-            var q = db.Allotments.Include(a => a.Hotel).AsQueryable();
+            // Base allotments
+            var qA = db.Allotments.Include(a => a.Hotel).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(SearchText))
-                q = q.Where(a => a.Title.Contains(SearchText) || a.Hotel!.Name.Contains(SearchText));
+                qA = qA.Where(a => a.Title.Contains(SearchText) || a.Hotel!.Name.Contains(SearchText));
 
             if (FilterHotel != null)
-                q = q.Where(a => a.HotelId == FilterHotel.Id);
+                qA = qA.Where(a => a.HotelId == FilterHotel.Id);
 
             if (FilterStatus != null)
-                q = q.Where(a => a.Status == FilterStatus);
+                qA = qA.Where(a => a.Status == FilterStatus);
 
-            var list = await q.AsNoTracking()
-                              .OrderByDescending(a => a.StartDate)
-                              .ToListAsync();
+            var allotments = await qA.AsNoTracking()
+                                     .OrderByDescending(a => a.StartDate)
+                                     .ToListAsync();
+
+            // Get all lines for these allotments
+            var aIds = allotments.Select(a => a.Id).ToList();
+
+            // Get all lines for these allotments
+            var lines = await db.AllotmentRoomTypes
+                                .Where(l => aIds.Contains(l.AllotmentId))
+                                .Select(l => new { l.Id, l.AllotmentId, l.QuantityTotal, l.QuantityCancelled })
+                                .ToListAsync();
+
+            var lineIds = lines.Select(l => l.Id).ToList();
+
+            // Compute sold per line (exclude cancelled reservations)
+            var soldByLine = await db.ReservationItems
+                .Include(ri => ri.Reservation)
+                .Where(ri => ri.AllotmentRoomTypeId != null &&
+                             lineIds.Contains(ri.AllotmentRoomTypeId.Value) &&
+                             ri.Reservation.Status != ReservationStatus.Cancelled)
+                .GroupBy(ri => ri.AllotmentRoomTypeId!.Value)
+                .Select(g => new { LineId = g.Key, Qty = g.Sum(x => x.Qty) })
+                .ToDictionaryAsync(x => x.LineId, x => x.Qty);
+            // Compute Remaining per allotment
+            var remainByAllot = aIds.ToDictionary(id => id, _ => 0);
+            foreach (var l in lines)
+            {
+                var sold = soldByLine.TryGetValue(l.Id, out var s) ? s : 0;
+                var remaining = Math.Max(0, l.QuantityTotal - l.QuantityCancelled - sold);
+                remainByAllot[l.AllotmentId] += remaining;
+            }
 
             Allotments.Clear();
-            foreach (var a in list) Allotments.Add(a);
+            foreach (var a in allotments)
+            {
+                Allotments.Add(new AllotmentRow
+                {
+                    Id = a.Id,
+                    HotelId = a.HotelId,
+                    Title = a.Title,
+                    HotelName = a.Hotel!.Name,
+                    StartDate = a.StartDate,
+                    EndDate = a.EndDate,
+                    OptionDueDate = a.OptionDueDate,
+                    Status = a.Status,
+                    RemainingTotal = remainByAllot.TryGetValue(a.Id, out var rem) ? rem : 0
+                });
+            }
 
-            // keep current lines in sync if a row is selected
+            // keep detail lines if a row is selected
             if (Selected != null) RefreshLinesForSelected();
         }
 
@@ -148,6 +169,7 @@ namespace TravelAgency.Desktop.ViewModels
             _isNewMode = true; _editingId = null; IsEditing = true;
 
             Selected = null; // allow a row click to switch to edit
+
             EditTitle = ""; EditNotes = "";
             EditHotel = Hotels.FirstOrDefault();
             EditStartDate = DateTime.Today;
@@ -207,18 +229,16 @@ namespace TravelAgency.Desktop.ViewModels
                 db.Allotments.Add(a);
                 await db.SaveChangesAsync();
 
-                // persist lines
                 foreach (var l in Lines)
                 {
                     db.AllotmentRoomTypes.Add(new AllotmentRoomType
                     {
                         AllotmentId = a.Id,
                         RoomTypeId = l.RoomTypeId,
-                        Quantity = l.Quantity,
+                        QuantityTotal = l.QuantityTotal,
+                        QuantityCancelled = l.QuantityCancelled,
                         PricePerNight = l.PricePerNight,
-                        Currency = l.Currency,
-                        IsSpecific = l.IsSpecific,
-                        IsCancelled = l.IsCancelled
+                        Currency = l.Currency
                     });
                 }
                 await db.SaveChangesAsync();
@@ -234,7 +254,7 @@ namespace TravelAgency.Desktop.ViewModels
                 a.Status = EditStatus ?? a.Status;
                 a.Notes = EditNotes;
 
-                // sync lines: delete & re-add (simple + safe for MVP)
+                // Replace lines for simplicity in MVP
                 var old = db.AllotmentRoomTypes.Where(x => x.AllotmentId == a.Id);
                 db.AllotmentRoomTypes.RemoveRange(old);
                 foreach (var l in Lines)
@@ -243,11 +263,10 @@ namespace TravelAgency.Desktop.ViewModels
                     {
                         AllotmentId = a.Id,
                         RoomTypeId = l.RoomTypeId,
-                        Quantity = l.Quantity,
+                        QuantityTotal = l.QuantityTotal,
+                        QuantityCancelled = l.QuantityCancelled,
                         PricePerNight = l.PricePerNight,
-                        Currency = l.Currency,
-                        IsSpecific = l.IsSpecific,
-                        IsCancelled = l.IsCancelled
+                        Currency = l.Currency
                     });
                 }
                 await db.SaveChangesAsync();
@@ -283,44 +302,43 @@ namespace TravelAgency.Desktop.ViewModels
 
             var lines = db.AllotmentRoomTypes.Where(x => x.AllotmentId == Selected.Id);
             db.AllotmentRoomTypes.RemoveRange(lines);
-            var entity = await db.Allotments.FirstAsync(x => x.Id == Selected.Id);
-            db.Allotments.Remove(entity);
+            db.Allotments.Remove(await db.Allotments.FirstAsync(x => x.Id == Selected.Id));
             await db.SaveChangesAsync();
 
             await LoadAsync();
         }
 
-        // Lines commands
+        // ----- Lines commands -----
+
         [RelayCommand]
         private void UpsertLine()
         {
             if (LineRoomType == null) return;
-            if (!int.TryParse(LineQty ?? "0", out var qty)) qty = 0;
+            if (!int.TryParse(LineTotalQty ?? "0", out var total)) total = 0;
             if (!decimal.TryParse(LinePrice ?? "0", NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
                 price = 0m;
 
             if (SelectedLine == null)
             {
-                Lines.Add(new AllotmentRoomType
+                Lines.Add(new LineRow
                 {
                     RoomTypeId = LineRoomType.Id,
                     RoomType = LineRoomType,
-                    Quantity = qty,
+                    QuantityTotal = total,
+                    QuantityCancelled = 0,
+                    Sold = 0,
                     PricePerNight = price,
-                    Currency = string.IsNullOrWhiteSpace(LineCurrency) ? "EUR" : LineCurrency!,
-                    IsSpecific = LineSpecific,
-                    IsCancelled = LineCancelled
+                    Currency = string.IsNullOrWhiteSpace(LineCurrency) ? "EUR" : LineCurrency!
                 });
             }
             else
             {
                 SelectedLine.RoomTypeId = LineRoomType.Id;
                 SelectedLine.RoomType = LineRoomType;
-                SelectedLine.Quantity = qty;
+                SelectedLine.QuantityTotal = total;
+                // keep existing Cancelled & Sold
                 SelectedLine.PricePerNight = price;
                 SelectedLine.Currency = string.IsNullOrWhiteSpace(LineCurrency) ? "EUR" : LineCurrency!;
-                SelectedLine.IsSpecific = LineSpecific;
-                SelectedLine.IsCancelled = LineCancelled;
                 OnPropertyChanged(nameof(Lines));
             }
 
@@ -333,6 +351,109 @@ namespace TravelAgency.Desktop.ViewModels
             if (SelectedLine == null) return;
             Lines.Remove(SelectedLine);
             ResetLineEditor();
+        }
+
+        [RelayCommand]
+        private void CancelUnits()
+        {
+            if (SelectedLine == null) return;
+            if (!int.TryParse(LineCancelQty ?? "0", out var qty) || qty <= 0) return;
+
+            var maxCancellable = SelectedLine.QuantityTotal - SelectedLine.Sold - SelectedLine.QuantityCancelled;
+            if (maxCancellable <= 0) return;
+
+            var delta = Math.Min(qty, maxCancellable);
+            SelectedLine.QuantityCancelled += delta;
+            LineCancelQty = "";
+            OnPropertyChanged(nameof(Lines));
+        }
+
+        [RelayCommand]
+        private void CancelRemaining()
+        {
+            if (SelectedLine == null) return;
+            var maxCancellable = SelectedLine.QuantityTotal - SelectedLine.Sold - SelectedLine.QuantityCancelled;
+            if (maxCancellable <= 0) return;
+
+            SelectedLine.QuantityCancelled += maxCancellable;
+            OnPropertyChanged(nameof(Lines));
+        }
+
+        private void ResetLineEditor()
+        {
+            LineRoomType = null;
+            LineTotalQty = "0";
+            LinePrice = "0";
+            LineCurrency = "EUR";
+            LineCancelQty = "";
+            SelectedLine = null;
+        }
+
+        private void RefreshLinesForSelected()
+        {
+            Lines.Clear();
+            if (Selected == null) return;
+
+            using var db = _dbf.CreateDbContext();
+
+            // compute sold per line (exclude cancelled reservations)
+            var soldByLine = db.ReservationItems
+                .Include(ri => ri.Reservation)
+                .Where(ri => ri.AllotmentRoomTypeId != null &&
+                             ri.Reservation.Status != ReservationStatus.Cancelled)
+                .GroupBy(ri => ri.AllotmentRoomTypeId!.Value)
+                .Select(g => new { LineId = g.Key, Qty = g.Sum(x => x.Qty) })
+                .ToDictionary(x => x.LineId, x => x.Qty);
+
+            var rows = db.AllotmentRoomTypes
+                         .Include(x => x.RoomType)
+                         .Where(x => x.AllotmentId == Selected.Id)
+                         .AsNoTracking()
+                         .ToList();
+
+            foreach (var l in rows)
+            {
+                var sold = soldByLine.TryGetValue(l.Id, out var s) ? s : 0;
+                Lines.Add(new LineRow
+                {
+                    Id = l.Id,
+                    RoomTypeId = l.RoomTypeId,
+                    RoomType = l.RoomType,
+                    QuantityTotal = l.QuantityTotal,
+                    QuantityCancelled = l.QuantityCancelled,
+                    Sold = sold,
+                    PricePerNight = l.PricePerNight,
+                    Currency = l.Currency
+                });
+            }
+        }
+
+        // lightweight row VM for the grid
+        public class LineRow : ObservableObject
+        {
+            public int Id { get; set; }
+            public int RoomTypeId { get; set; }
+            public RoomType RoomType { get; set; } = null!;
+            public int QuantityTotal { get; set; }
+            public int QuantityCancelled { get; set; }
+            public int Sold { get; set; }
+            public int Remaining => Math.Max(0, QuantityTotal - QuantityCancelled - Sold);
+            public decimal PricePerNight { get; set; }
+            public string Currency { get; set; } = "EUR";
+        }
+
+        public class AllotmentRow : ObservableObject
+        {
+            public int Id { get; init; }
+            public int HotelId { get; init; }
+            public string Title { get; init; } = "";
+            public string HotelName { get; init; } = "";
+            public DateTime StartDate { get; init; }
+            public DateTime EndDate { get; init; }
+            public DateTime? OptionDueDate { get; init; }
+            public AllotmentStatus Status { get; init; }
+            public int RemainingTotal { get; init; }
+            public string? Notes { get; init; }           // <-- add this
         }
     }
 }

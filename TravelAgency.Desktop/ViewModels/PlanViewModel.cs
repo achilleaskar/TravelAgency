@@ -72,16 +72,15 @@ namespace TravelAgency.Desktop.ViewModels
 
             var allotments = await q.AsNoTracking().ToListAsync();
 
-            // Συγκεντρώνουμε όλα τα ART ids
+            // collect all room-type ids for these allotments
             var artList = allotments.SelectMany(a => a.RoomTypes).ToList();
             var artIds = artList.Select(rt => rt.Id).ToList();
-
             if (artIds.Count == 0) return;
 
             var rangeStart = FromDate.Date;
             var rangeEnd = ToDate.Date.AddDays(1); // exclusive
 
-            // Prefetch: όλα τα ReservationItems για τα ARTs που τέμνουν το range
+            // Prefetch reservation items for these lines intersecting the range (exclude cancelled reservations)
             var items = await db.ReservationItems
                 .Include(x => x.Reservation)
                 .Where(x =>
@@ -93,12 +92,13 @@ namespace TravelAgency.Desktop.ViewModels
                 .AsNoTracking()
                 .ToListAsync();
 
-            // Για γρήγορη πρόσβαση στα allotments/rt ανά id
-            var artMap = artList.ToDictionary(rt => rt.Id, rt => rt);
+            // Quick lookups
             var allotByArt = artList.ToDictionary(rt => rt.Id, rt => rt.Allotment!);
 
-            // Υπολογισμός δεσμεύσεων ανά (artId, day)
+            // per-(artId, day) reserved quantity
             var dayReserved = new Dictionary<(int artId, DateTime day), int>();
+
+            // any paid lines (to color fully-booked as paid vs unpaid)
             var anyPaidArt = new HashSet<int>(
                 items.Where(i => i.IsPaid && i.AllotmentRoomTypeId.HasValue)
                      .Select(i => i.AllotmentRoomTypeId!.Value));
@@ -108,11 +108,11 @@ namespace TravelAgency.Desktop.ViewModels
                 var artId = it.AllotmentRoomTypeId!.Value;
                 var allot = allotByArt[artId];
 
-                // εύρος που πραγματικά μετράει για timeline
+                // effective range for timeline (exclusive end)
                 var start = (it.StartDate ?? allot.StartDate).Date;
-                var endExclusive = (it.EndDate ?? allot.EndDate).Date; // exclusive εδώ
+                var endExclusive = (it.EndDate ?? allot.EndDate).Date;
 
-                // intersect με τα φίλτρα
+                // intersect with current view range
                 var s = start < rangeStart ? rangeStart : start;
                 var e = endExclusive > rangeEnd ? rangeEnd : endExclusive;
 
@@ -123,21 +123,20 @@ namespace TravelAgency.Desktop.ViewModels
                 }
             }
 
-            // Χτίζουμε σειρές
-            for (int aIndex = 0; aIndex < allotments.Count; aIndex++)
+            // Build rows (one per Allotment RoomType)
+            foreach (var a in allotments)
             {
-                var a = allotments[aIndex];
-
                 foreach (var rt in a.RoomTypes)
                 {
+                    // NOTE: label shows total contracted capacity (QuantityTotal)
                     var row = new PlanRowVM
                     {
-                        Label = $"{a.Hotel!.Name} · {rt.RoomType!.Name} ({rt.Quantity}) · {a.StartDate:dd/MM}-{a.EndDate:dd/MM}"
+                        Label = $"{a.Hotel!.Name} · {rt.RoomType!.Name} ({rt.QuantityTotal}) · {a.StartDate:dd/MM}-{a.EndDate:dd/MM}"
                     };
 
                     for (var day = rangeStart; day < rangeEnd; day = day.AddDays(1))
                     {
-                        // εκτός allotment -> Empty
+                        // outside allotment window → Empty
                         if (day < a.StartDate.Date || day >= a.EndDate.Date)
                         {
                             row.Cells.Add(new PlanCellVM { State = PlanCellState.Empty, Text = "" });
@@ -145,32 +144,35 @@ namespace TravelAgency.Desktop.ViewModels
                         }
 
                         dayReserved.TryGetValue((rt.Id, day), out var reservedQty);
-                        var free = Math.Max(0, rt.Quantity - reservedQty);
+
+                        // Free = Total - Cancelled - Reserved
+                        var baseCapacity = Math.Max(0, rt.QuantityTotal - rt.QuantityCancelled);
+                        var free = Math.Max(0, baseCapacity - reservedQty);
 
                         PlanCellState state;
                         if (free == 0)
                         {
-                            // πλήρες: πληρωμένα ή όχι;
                             state = anyPaidArt.Contains(rt.Id) ? PlanCellState.FullPaid : PlanCellState.FullUnpaid;
                         }
                         else if (a.OptionDueDate.HasValue && a.OptionDueDate.Value.Date < DateTime.Today)
                         {
-                            state = PlanCellState.Overdue; // έχει λήξει
+                            state = PlanCellState.Overdue;
                         }
                         else if (a.OptionDueDate.HasValue && a.OptionDueDate.Value.Date <= DateTime.Today.AddDays(3))
                         {
-                            state = PlanCellState.FreeDueSoon; // 3/2/1 μέρες
+                            state = PlanCellState.FreeDueSoon;
                         }
                         else
                         {
-                            state = PlanCellState.FreePaid; // οκ
+                            state = PlanCellState.FreePaid;
                         }
 
                         row.Cells.Add(new PlanCellVM
                         {
                             State = state,
                             Text = free > 0 ? free.ToString() : "0",
-                            Tooltip = $"{a.Title} | Free: {free}/{rt.Quantity}\nPrice: {rt.PricePerNight:0.##} {rt.Currency}"
+                            Tooltip = $"{a.Title} | Free: {free}/{baseCapacity}  (Total {rt.QuantityTotal}, Cancelled {rt.QuantityCancelled})\n" +
+                                      $"Price: {rt.PricePerNight:0.##} {rt.Currency}"
                         });
                     }
 

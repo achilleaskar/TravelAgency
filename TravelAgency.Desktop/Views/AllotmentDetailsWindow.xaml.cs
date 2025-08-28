@@ -1,30 +1,48 @@
-﻿using System.Linq;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using Microsoft.EntityFrameworkCore;
 using TravelAgency.Data;
+using TravelAgency.Domain.Enums;
 
 namespace TravelAgency.Desktop.Views
 {
     public partial class AllotmentDetailsWindow : Window
     {
         private readonly TravelAgencyDbContext db;
-        private readonly int _allotmentId;
 
         public AllotmentDetailsWindow(TravelAgencyDbContext db, int allotmentId)
         {
             InitializeComponent();
-            db = db; _allotmentId = allotmentId;
+            db = db; 
+            _allotmentId = allotmentId;
             _ = LoadAsync();
         }
 
+        private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
+        private readonly int _allotmentId;
+
         private async Task LoadAsync()
         {
+            await using var db = await _dbf.CreateDbContextAsync();
+
             var a = await db.Allotments
                 .Include(x => x.Hotel)!.ThenInclude(h => h.City)
                 .Include(x => x.RoomTypes)!.ThenInclude(rt => rt.RoomType)
                 .AsNoTracking()
                 .FirstAsync(x => x.Id == _allotmentId);
+
+            // compute Sold per line (exclude cancelled reservations)
+            var lineIds = a.RoomTypes.Select(rt => rt.Id).ToList();
+
+            var soldByLine = await db.ReservationItems
+                .Include(ri => ri.Reservation)
+                .Where(ri => ri.AllotmentRoomTypeId != null &&
+                             lineIds.Contains(ri.AllotmentRoomTypeId.Value) &&
+                             ri.Reservation.Status != ReservationStatus.Cancelled)
+                .GroupBy(ri => ri.AllotmentRoomTypeId!.Value)
+                .Select(g => new { LineId = g.Key, Qty = g.Sum(x => x.Qty) })
+                .ToDictionaryAsync(x => x.LineId, x => x.Qty);
 
             var logs = await db.UpdateLogs
                 .Where(x => x.EntityType == "Allotment" && x.EntityId == _allotmentId)
@@ -32,6 +50,17 @@ namespace TravelAgency.Desktop.Views
                 .Take(100)
                 .AsNoTracking()
                 .ToListAsync();
+
+            var roomTypeLines = a.RoomTypes
+                .Select(rt =>
+                {
+                    var sold = soldByLine.TryGetValue(rt.Id, out var q) ? q : 0;
+                    var baseCapacity = Math.Max(0, rt.QuantityTotal - rt.QuantityCancelled);
+                    var remaining = Math.Max(0, baseCapacity - sold);
+                    return $"{rt.RoomType!.Name}: Total {rt.QuantityTotal}, Cancelled {rt.QuantityCancelled}, " +
+                           $"Sold {sold}, Remaining {remaining} @ {rt.PricePerNight:0.##} {rt.Currency}";
+                })
+                .ToList();
 
             DataContext = new
             {
@@ -42,9 +71,7 @@ namespace TravelAgency.Desktop.Views
                 Status = $"Status: {a.Status}",
                 a.Notes,
                 CreatedUpdated = $"Created: {a.CreatedAt:u} | Updated: {a.UpdatedAt:u}",
-                RoomTypes = a.RoomTypes
-                    .Select(rt => $"{rt.RoomType!.Name}: {rt.Quantity} × {rt.PricePerNight:0.##} {rt.Currency}")
-                    .ToList(),
+                RoomTypes = roomTypeLines,
                 History = logs.Select(l => new
                 {
                     Header = $"{l.ChangedAt:u} • {l.Field}",

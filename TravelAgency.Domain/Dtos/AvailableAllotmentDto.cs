@@ -9,5 +9,6 @@ namespace TravelAgency.Domain.Models
         public string HotelName { get; set; } = "";
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+        public int RemainingTotal { get; set; }   // NEW
     }
 }
