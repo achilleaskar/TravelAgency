@@ -56,23 +56,26 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task LoadAvailableAsync()
         {
+            if (SelectedCustomer == null)
+            {
+                // optional: don't show availability until a customer is chosen
+                Available.Clear();
+                return;
+            }
+
             await using var db = await _dbf.CreateDbContextAsync();
 
-            // Build base query for lines with hotel/city etc.
+            // base lines (AllotmentRoomType) with hotel/city and date overlap
             var lines = db.AllotmentRoomTypes
-                          .Include(l => l.RoomType)
-                          .Include(l => l.Allotment)
-                            .ThenInclude(a => a.Hotel)
-                              .ThenInclude(h => h.City)
-                          .AsQueryable();
-
-            // Filter by date window at the Allotment level
-            lines = lines.Where(l => l.Allotment.EndDate >= FromDate && l.Allotment.StartDate <= ToDate);
+                .Include(l => l.RoomType)
+                .Include(l => l.Allotment)!.ThenInclude(a => a.Hotel)!.ThenInclude(h => h.City)
+                .Where(l => l.Allotment!.EndDate >= FromDate &&
+                            l.Allotment!.StartDate <= ToDate);
 
             if (SelectedCity != null)
-                lines = lines.Where(l => l.Allotment.Hotel!.CityId == SelectedCity.Id);
+                lines = lines.Where(l => l.Allotment!.Hotel!.CityId == SelectedCity.Id);
 
-            // Join to reservation items (exclude cancelled reservations) to compute Sold per line
+            // compute Sold per line (exclude cancelled reservations)
             var lineWithSold = from l in lines
                                join ri in db.ReservationItems.Include(x => x.Reservation)
                                     on l.Id equals ri.AllotmentRoomTypeId into g
@@ -83,20 +86,27 @@ namespace TravelAgency.Desktop.ViewModels
                                            .Sum(x => (int?)x.Qty) ?? 0
                                };
 
-            // Keep only lines with Remaining > 0
+            // keep only lines with Remaining > 0
             var availableLines = await lineWithSold
                 .Where(x => (x.Line.QuantityTotal - x.Line.QuantityCancelled - x.Sold) > 0)
                 .AsNoTracking()
                 .ToListAsync();
 
-            // Group back to Allotments, compute RemainingTotal per allotment
+            // group by scalar fields (avoids blank/duplicate rows)
             var grouped = availableLines
-                .GroupBy(x => x.Line.Allotment)
+                .GroupBy(x => new
+                {
+                    x.Line.AllotmentId,
+                    x.Line.Allotment!.Title,
+                    x.Line.Allotment!.StartDate,
+                    x.Line.Allotment!.EndDate,
+                    HotelName = x.Line.Allotment!.Hotel!.Name
+                })
                 .Select(g => new AvailableAllotmentDto
                 {
-                    AllotmentId = g.Key.Id,
+                    AllotmentId = g.Key.AllotmentId,
                     Title = g.Key.Title,
-                    HotelName = g.Key.Hotel!.Name,
+                    HotelName = g.Key.HotelName,
                     StartDate = g.Key.StartDate,
                     EndDate = g.Key.EndDate,
                     RemainingTotal = g.Sum(x => x.Line.QuantityTotal - x.Line.QuantityCancelled - x.Sold)
@@ -107,6 +117,7 @@ namespace TravelAgency.Desktop.ViewModels
             Available.Clear();
             foreach (var it in grouped) Available.Add(it);
         }
+
 
 
         [RelayCommand]
