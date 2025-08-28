@@ -95,7 +95,7 @@
                         <DataTemplate>
                             <Border Width="32"
                                     Height="22"
-                                    Margin="1"
+                                    Margin="2,1"
                                     Background="#eee"
                                     CornerRadius="2">
                                 <TextBlock Text="{Binding}"

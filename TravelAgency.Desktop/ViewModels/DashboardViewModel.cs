@@ -1,21 +1,38 @@
-﻿using System;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;                           // <-- for Application.Current.Dispatcher
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.ObjectModel;
+using TravelAgency.Data;
 using TravelAgency.Domain.Entities;
 using TravelAgency.Services;
 
-public partial class DashboardViewModel : ObservableObject, IDisposable
+public partial class DashboardViewModel : ObservableObject
 {
-    private readonly AlertService _alerts;
+    private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
     private readonly LookupCacheService _cache;
 
     public ObservableCollection<Customer> Customers => _cache.Customers;
     public ObservableCollection<Hotel> Hotels => _cache.Hotels;
     public ObservableCollection<string> Countries { get; } = new();
+
+    public DashboardViewModel(IDbContextFactory<TravelAgencyDbContext> dbf, LookupCacheService cache)
+    {
+        _dbf = dbf; _cache = cache;
+
+        // when cache loads (startup or refresh) rebuild countries and load alerts
+        _cache.Refreshed += (_, __) =>
+        {
+            Countries.Clear();
+            foreach (var c in _cache.Cities.Select(c => c.Country).Distinct().OrderBy(x => x))
+                Countries.Add(c);
+
+            // optional: pick defaults
+            SelectedCustomer ??= Customers.FirstOrDefault();
+            SelectedHotel ??= Hotels.FirstOrDefault();
+
+            _ = LoadAlertsAsync();
+        };
+    }
 
     [ObservableProperty] private Customer? selectedCustomer;
     [ObservableProperty] private Hotel? selectedHotel;
@@ -24,66 +41,19 @@ public partial class DashboardViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<AlertDto> Alerts { get; } = new();
 
-    public DashboardViewModel(AlertService alerts, LookupCacheService cache)
-    {
-        _alerts = alerts;
-        _cache = cache;
-
-        RebuildCountries();
-
-        // auto-refresh Countries when Cities change
-        _cache.Refreshed += OnCacheRefreshed;
-
-        _ = RefreshAsync();
-    }
-
-    private void OnCacheRefreshed(object? sender, EventArgs e)
-    {
-        void Work()
-        {
-            // Preserve current selection if still present
-            var prev = SelectedCountry;
-            RebuildCountries();
-            if (prev != null && Countries.Contains(prev)) SelectedCountry = prev;
-        }
-
-        var disp = Application.Current?.Dispatcher;
-        if (disp != null && !disp.CheckAccess()) disp.Invoke(Work);
-        else Work();
-    }
-
-    private void RebuildCountries()
-    {
-        Countries.Clear();
-        foreach (var c in _cache.Cities
-                                .Select(x => x.Country)
-                                .Where(s => !string.IsNullOrWhiteSpace(s))
-                                .Distinct()
-                                .OrderBy(x => x))
-        {
-            Countries.Add(c);
-        }
-    }
-
     [RelayCommand]
-    private async Task RefreshAsync()
+    private async Task LoadAlertsAsync()
     {
+        var today = DateTime.Today;
+        var hotelId = SelectedHotel?.Id;
+        var country = string.IsNullOrWhiteSpace(SelectedCountry) ? null : SelectedCountry;
+        var custId = SelectedCustomer?.Id;
+        var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText;
+
+        var svc = new AlertService(_dbf);
+        var list = await svc.GetAlertsAsync(today, hotelId, country, custId, search);
+
         Alerts.Clear();
-
-        var list = await _alerts.GetAlertsAsync(
-            today: DateTime.Today,
-            hotelId: SelectedHotel?.Id,
-            country: SelectedCountry,
-            customerId: SelectedCustomer?.Id,
-            search: SearchText);
-
-        foreach (var a in list)
-            Alerts.Add(a);
-    }
-
-
-    public void Dispose()
-    {
-        _cache.Refreshed -= OnCacheRefreshed;
+        foreach (var a in list) Alerts.Add(a);
     }
 }
