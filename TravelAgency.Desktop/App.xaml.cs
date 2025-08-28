@@ -44,6 +44,7 @@ public partial class App : Application
                     // ViewModels
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ReservationsViewModel>();
+                    services.AddTransient<ReservationEditorViewModel>();
                     services.AddTransient<AllotmentsViewModel>();
                     services.AddTransient<MainViewModel>();
                     services.AddTransient<PlanViewModel>();
