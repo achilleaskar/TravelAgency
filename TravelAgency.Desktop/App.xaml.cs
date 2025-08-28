@@ -21,12 +21,16 @@ public partial class App : Application
         HostRef = Host.CreateDefaultBuilder()
             .ConfigureServices((ctx, services) =>
             {
-                // instead of AddDbContext<TravelAgencyDbContext>(...)
+                // Use a factory to avoid concurrent DbContext usage
                 services.AddDbContextFactory<TravelAgencyDbContext>(opt =>
                 {
                     var cs = ctx.Configuration.GetConnectionString("MySql")!;
                     opt.UseMySql(cs, ServerVersion.AutoDetect(cs));
                 });
+
+                // Lookup cache (shared)
+                services.AddSingleton<LookupCacheService>();
+
                 // Services already here...
                 services.AddScoped<AllotmentService>();
                 services.AddScoped<ReservationService>();
@@ -47,6 +51,10 @@ public partial class App : Application
             .Build();
 
         base.OnStartup(e);
+        // Warm up cache so dropdowns are ready
+        var cache = HostRef.Services.GetRequiredService<LookupCacheService>();
+        cache.WarmUpAsync().GetAwaiter().GetResult();
+
         new MainWindow { DataContext = HostRef!.Services.GetRequiredService<MainViewModel>() }.Show();
     }
 }

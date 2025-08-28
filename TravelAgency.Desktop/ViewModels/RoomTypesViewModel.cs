@@ -1,35 +1,44 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.ObjectModel;
 using TravelAgency.Data;
 using TravelAgency.Domain.Entities;
+using TravelAgency.Services;
 
 namespace TravelAgency.Desktop.ViewModels
 {
     public partial class RoomTypesViewModel : ObservableObject
     {
         private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
-        public RoomTypesViewModel(IDbContextFactory<TravelAgencyDbContext> dbf) => _dbf = dbf;
+        private readonly LookupCacheService _cache;
 
+        public RoomTypesViewModel(IDbContextFactory<TravelAgencyDbContext> dbf, LookupCacheService cache)
+        {
+            _dbf = dbf;
+            _cache = cache;
+        }
+
+        // Master grid
         public ObservableCollection<RoomType> Items { get; } = new();
 
+        // Selection + search
         [ObservableProperty] private RoomType? selected;
         [ObservableProperty] private string? searchText;
 
-        // editor state
+        // Editor state
         [ObservableProperty] private bool isEditing;
         [ObservableProperty] private string editorTitle = "Select a row and click Edit, or click Add New";
-        [ObservableProperty] private string editorHint = "Use the left list to select an item for editing.";
+        [ObservableProperty] private string editorHint = "Use the left list to select a room type.";
 
-        // editor fields (decoupled from Selected)
+        // Editor fields
         [ObservableProperty] private string? editCode;
         [ObservableProperty] private string? editName;
 
-        // mode flags
         private bool _isNewMode;
         private int? _editingId;
-         
 
         public bool CanEdit => Selected != null && !IsEditing;
         public bool CanDelete => Selected != null && !IsEditing;
@@ -39,6 +48,7 @@ namespace TravelAgency.Desktop.ViewModels
             OnPropertyChanged(nameof(CanEdit));
             OnPropertyChanged(nameof(CanDelete));
 
+            // If user started "Add New" then clicked a row, flip to Edit
             if (value != null && IsEditing && _isNewMode)
             {
                 _isNewMode = false;
@@ -52,34 +62,27 @@ namespace TravelAgency.Desktop.ViewModels
             }
         }
 
-
         [RelayCommand]
         private async Task LoadAsync()
         {
             await using var db = await _dbf.CreateDbContextAsync();
 
             Items.Clear();
+
             var q = db.RoomTypes.AsQueryable();
             if (!string.IsNullOrWhiteSpace(SearchText))
-                q = q.Where(x => x.Code.Contains(SearchText) || x.Name.Contains(SearchText));
-            foreach (var it in await q.OrderBy(x => x.Code).AsNoTracking().ToListAsync())
-                Items.Add(it);
+                q = q.Where(r => r.Code.Contains(SearchText) || r.Name.Contains(SearchText));
 
-            if (!IsEditing)
-            {
-                EditorTitle = "Select a row and click Edit, or click Add New";
-                EditorHint = "Use the left list to select an item for editing.";
-            }
+            var list = await q.AsNoTracking().OrderBy(r => r.Name).ToListAsync();
+            foreach (var r in list) Items.Add(r);
         }
 
         [RelayCommand]
         private void BeginNew()
         {
-            _isNewMode = true;
-            _editingId = null;
-            IsEditing = true;
+            _isNewMode = true; _editingId = null; IsEditing = true;
 
-            Selected = null;
+            Selected = null; // allow next row click to switch to edit
 
             EditCode = "";
             EditName = "";
@@ -88,16 +91,16 @@ namespace TravelAgency.Desktop.ViewModels
             EditorHint = "Fill the fields and click Save.";
         }
 
-
         [RelayCommand]
         private void BeginEdit()
         {
             if (Selected == null) return;
-            _isNewMode = false;
-            _editingId = Selected.Id;
-            IsEditing = true;
+
+            _isNewMode = false; _editingId = Selected.Id; IsEditing = true;
+
             EditCode = Selected.Code;
             EditName = Selected.Name;
+
             EditorTitle = $"Edit Room Type #{Selected.Id}";
             EditorHint = "Change values and click Save.";
         }
@@ -105,22 +108,28 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private async Task SaveAsync()
         {
-            await using var db = await _dbf.CreateDbContextAsync();
+            if (string.IsNullOrWhiteSpace(EditName)) return;
 
-            if (string.IsNullOrWhiteSpace(EditCode) || string.IsNullOrWhiteSpace(EditName)) return;
+            await using var db = await _dbf.CreateDbContextAsync();
 
             if (_isNewMode)
             {
-                db.RoomTypes.Add(new RoomType { Code = EditCode!.Trim(), Name = EditName!.Trim() });
+                db.RoomTypes.Add(new RoomType
+                {
+                    Code = EditCode,
+                    Name = EditName!.Trim()
+                });
             }
             else if (_editingId.HasValue)
             {
-                var entity = await db.RoomTypes.FirstAsync(x => x.Id == _editingId.Value);
-                entity.Code = EditCode!.Trim();
-                entity.Name = EditName!.Trim();
+                var rt = await db.RoomTypes.FirstAsync(x => x.Id == _editingId.Value);
+                rt.Code = EditCode;
+                rt.Name = EditName!.Trim();
             }
 
             await db.SaveChangesAsync();
+            await _cache.RefreshAsync(); // Allotments lines dropdowns need this
+
             IsEditing = false;
             await LoadAsync();
         }
@@ -128,35 +137,27 @@ namespace TravelAgency.Desktop.ViewModels
         [RelayCommand]
         private void Cancel()
         {
-            IsEditing = false;
-            _isNewMode = false;
-            _editingId = null;
+            IsEditing = false; _isNewMode = false; _editingId = null;
 
-            ResetEditorFields();
+            EditCode = ""; EditName = "";
 
             EditorTitle = "Select a row and click Edit, or click Add New";
-            EditorHint = "Use the list on the left to select a room type.";
+            EditorHint = "Use the left list to select a room type.";
 
             OnPropertyChanged(nameof(CanEdit));
             OnPropertyChanged(nameof(CanDelete));
         }
 
-        private void ResetEditorFields()
-        {
-            EditCode = "";
-            EditName = "";
-        }
-
-
         [RelayCommand]
         private async Task DeleteAsync()
         {
-            await using var db = await _dbf.CreateDbContextAsync();
-
             if (Selected == null) return;
-            var entity = await db.RoomTypes.FirstAsync(x => x.Id == Selected.Id);
-            db.RoomTypes.Remove(entity);
+
+            await using var db = await _dbf.CreateDbContextAsync();
+            db.RoomTypes.Remove(await db.RoomTypes.FirstAsync(x => x.Id == Selected.Id));
             await db.SaveChangesAsync();
+
+            await _cache.RefreshAsync(); // reflect removal across app
             await LoadAsync();
         }
     }
