@@ -1,4 +1,6 @@
-﻿using System.Windows.Controls;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System.Windows.Controls;
+using TravelAgency.Desktop.ViewModels;
 
 namespace TravelAgency.Desktop.Views
 {
@@ -10,6 +12,7 @@ namespace TravelAgency.Desktop.Views
         public DashboardView()
         {
             InitializeComponent();
+            DataContext = App.HostRef!.Services.GetRequiredService<DashboardViewModel>();
         }
     }
 }

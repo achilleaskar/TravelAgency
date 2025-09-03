@@ -1,59 +1,92 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;                 // Application.Current.Dispatcher
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.ObjectModel;
 using TravelAgency.Data;
 using TravelAgency.Domain.Entities;
 using TravelAgency.Services;
 
-public partial class DashboardViewModel : ObservableObject
+namespace TravelAgency.Desktop.ViewModels
 {
-    private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
-    private readonly LookupCacheService _cache;
-
-    public ObservableCollection<Customer> Customers => _cache.Customers;
-    public ObservableCollection<Hotel> Hotels => _cache.Hotels;
-    public ObservableCollection<string> Countries { get; } = new();
-
-    public DashboardViewModel(IDbContextFactory<TravelAgencyDbContext> dbf, LookupCacheService cache)
+    public partial class DashboardViewModel : ObservableObject
     {
-        _dbf = dbf; _cache = cache;
+        private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
+        private readonly LookupCacheService _cache;
 
-        // when cache loads (startup or refresh) rebuild countries and load alerts
-        _cache.Refreshed += (_, __) =>
+        // bind to the *shared* cache collections (DON’T copy into new ObservableCollections)
+        
+        public ObservableCollection<Customer> Customers => _cache.Customers;
+
+        public ObservableCollection<Hotel> Hotels => _cache.Hotels;
+
+        // Countries are derived, so we keep a local list and rebuild on cache refresh
+        public ObservableCollection<string> Countries { get; } = new();
+
+        [ObservableProperty] private Customer? selectedCustomer;
+        [ObservableProperty] private Hotel? selectedHotel;
+        [ObservableProperty] private string? selectedCountry;
+        [ObservableProperty] private string? searchText;
+
+        public ObservableCollection<AlertDto> Alerts { get; } = new();
+
+        public DashboardViewModel(IDbContextFactory<TravelAgencyDbContext> dbf, LookupCacheService cache)
         {
-            Countries.Clear();
-            foreach (var c in _cache.Cities.Select(c => c.Country).Distinct().OrderBy(x => x))
-                Countries.Add(c);
+            _dbf = dbf;
+            _cache = cache;
 
-            // optional: pick defaults
-            SelectedCustomer ??= Customers.FirstOrDefault();
-            SelectedHotel ??= Hotels.FirstOrDefault();
+            // whenever cache refreshes (startup or later), rebuild filters and load alerts
+            _cache.Refreshed += (_, __) => ApplyCache();
 
-            _ = LoadAlertsAsync();
-        };
-    }
+            // if cache is already loaded by the time this VM is created, apply immediately
+            if (_cache.Cities.Count > 0 || _cache.Customers.Count > 0) ApplyCache();
+        }
 
-    [ObservableProperty] private Customer? selectedCustomer;
-    [ObservableProperty] private Hotel? selectedHotel;
-    [ObservableProperty] private string? selectedCountry;
-    [ObservableProperty] private string? searchText;
+        private void ApplyCache()
+        {
+            void Do()
+            {
+                Countries.Clear();
+                foreach (var c in _cache.Cities
+                                         .Select(ci => ci.Country)
+                                         .Where(s => !string.IsNullOrWhiteSpace(s))
+                                         .Distinct()
+                                         .OrderBy(s => s))
+                    Countries.Add(c);
 
-    public ObservableCollection<AlertDto> Alerts { get; } = new();
+                // pick sane defaults once
+                SelectedCustomer ??= Customers.FirstOrDefault();
+                SelectedHotel ??= Hotels.FirstOrDefault();
 
-    [RelayCommand]
-    private async Task LoadAlertsAsync()
-    {
-        var today = DateTime.Today;
-        var hotelId = SelectedHotel?.Id;
-        var country = string.IsNullOrWhiteSpace(SelectedCountry) ? null : SelectedCountry;
-        var custId = SelectedCustomer?.Id;
-        var search = string.IsNullOrWhiteSpace(SearchText) ? null : SearchText;
+                // nudge bindings (rarely needed, but harmless)
+                OnPropertyChanged(nameof(Customers));
+                OnPropertyChanged(nameof(Hotels));
 
-        var svc = new AlertService(_dbf);
-        var list = await svc.GetAlertsAsync(today, hotelId, country, custId, search);
+                _ = LoadAlertsAsync();
+            }
 
-        Alerts.Clear();
-        foreach (var a in list) Alerts.Add(a);
+            var d = Application.Current?.Dispatcher;
+            if (d != null && !d.CheckAccess()) d.Invoke(Do);
+            else Do();
+        }
+
+        [RelayCommand]
+        private async Task LoadAlertsAsync()
+        {
+            var svc = new AlertService(_dbf);
+
+            var list = await svc.GetAlertsAsync(
+                DateTime.Today,
+                SelectedHotel?.Id,
+                string.IsNullOrWhiteSpace(SelectedCountry) ? null : SelectedCountry,
+                SelectedCustomer?.Id,
+                string.IsNullOrWhiteSpace(SearchText) ? null : SearchText);
+
+            Alerts.Clear();
+            foreach (var a in list) Alerts.Add(a);
+        }
     }
 }

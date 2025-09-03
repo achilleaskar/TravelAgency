@@ -3,6 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewmodels="clr-namespace:TravelAgency.Desktop.ViewModels"
+             d:DataContext="{d:DesignInstance Type=viewmodels:DashboardViewModel}"
              mc:Ignorable="d"
              d:DesignHeight="450"
              Background="White"
@@ -73,7 +75,7 @@
             <!-- Refresh -->
             <Button Grid.Column="12"
                     Content="Refresh"
-                    Command="{Binding RefreshCommand}"
+                    Command="{Binding LoadAlertsCommand}"
                     Style="{StaticResource FormControl}" />
         </Grid>
         <!-- Alerts grid (unchanged columns or include new ones if you added them) -->

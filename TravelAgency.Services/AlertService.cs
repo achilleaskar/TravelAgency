@@ -93,8 +93,7 @@ public class AlertService
         var allotQ = db.Allotments
             .Include(a => a.Hotel)!.ThenInclude(h => h.City)
             .Where(a => a.OptionDueDate != null &&
-                        a.OptionDueDate >= today &&
-                        a.OptionDueDate <= today.AddDays(3));
+                        a.OptionDueDate <= today.AddDays(7));
 
         if (hotelId != null) allotQ = allotQ.Where(a => a.HotelId == hotelId);
         if (!string.IsNullOrWhiteSpace(country)) allotQ = allotQ.Where(a => a.Hotel!.City!.Country == country);
@@ -102,7 +101,7 @@ public class AlertService
             allotQ = allotQ.Where(a =>
                 a.Hotel!.Name.Contains(search) ||
                 a.Hotel!.City!.Country.Contains(search));
-
+        var a = await allotQ.ToListAsync();
         var optionAlerts = await allotQ
             .Select(a => new AlertDto(
                 $"Hotel option payment for {a.Hotel!.Name} due {a.OptionDueDate!.Value:dd/MM}",
