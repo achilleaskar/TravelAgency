@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TravelAgency.Domain.Entities;
+using TravelAgency.Domain.Entities;
 
 namespace TravelAgency.Data;
 
@@ -53,25 +54,21 @@ public class TravelAgencyDbContext : DbContext
         b.Entity<Reservation>().Property(x => x.Notes).HasMaxLength(2000);
     }
 
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
 
-        foreach (var e in ChangeTracker.Entries())
+        // ενημέρωση AuditableEntity timestamps
+        foreach (var e in ChangeTracker.Entries<AuditableEntity>())
         {
-            if (e.Entity is Allotment a)
+            if (e.State == EntityState.Added)
             {
-                if (e.State == EntityState.Added) { a.CreatedAt = a.UpdatedAt = now; }
-                if (e.State == EntityState.Modified) a.UpdatedAt = now;
+                e.Entity.CreatedAt = now;
+                e.Entity.UpdatedAt = now;
             }
-            if (e.Entity is AllotmentRoomType art)
+            else if (e.State == EntityState.Modified)
             {
-                if (e.State == EntityState.Added) { art.CreatedAt = art.UpdatedAt = now; }
-                if (e.State == EntityState.Modified) art.UpdatedAt = now;
-            }
-            if (e.Entity is AllotmentPayment pay)
-            {
-                if (e.State == EntityState.Added) { pay.CreatedAt = now; }
+                e.Entity.UpdatedAt = now;
             }
         }
 
@@ -80,13 +77,13 @@ public class TravelAgencyDbContext : DbContext
                                            .Where(x => x.State == EntityState.Modified &&
                                                        (x.Entity is Allotment || x.Entity is AllotmentRoomType)))
         {
-            WriteChangeLogs(entry, now);
+            WriteUpdateLogs(entry, now);
         }
 
-        return await base.SaveChangesAsync(cancellationToken);
+        return await base.SaveChangesAsync(ct);
     }
 
-    private void WriteChangeLogs(EntityEntry entry, DateTime whenUtc)
+    private void WriteUpdateLogs(EntityEntry entry, DateTime whenUtc)
     {
         string entityName;
         int entityId;
@@ -99,25 +96,26 @@ public class TravelAgencyDbContext : DbContext
                 entityId = a.Id;
                 allotmentId = a.Id;
                 break;
-            case AllotmentRoomType art:
+
+            case AllotmentRoomType l:
                 entityName = nameof(AllotmentRoomType);
-                entityId = art.Id;
-                allotmentId = art.AllotmentId;
+                entityId = l.Id;
+                allotmentId = l.AllotmentId;
                 break;
-            default:
-                return;
+
+            default: return;
         }
 
-        foreach (var prop in entry.Properties)
+        foreach (var p in entry.Properties)
         {
-            if (!prop.IsModified) continue;
+            if (!p.IsModified) continue;
+            var propName = p.Metadata.Name;
 
-            var name = prop.Metadata.Name;
-            if (name is nameof(Allotment.UpdatedAt) or nameof(AllotmentRoomType.UpdatedAt))
-                continue;
+            // αγνόησε UpdatedAt (θόρυβος)
+            if (propName is nameof(AuditableEntity.UpdatedAt)) continue;
 
-            var oldVal = prop.OriginalValue?.ToString();
-            var newVal = prop.CurrentValue?.ToString();
+            var oldVal = p.OriginalValue?.ToString();
+            var newVal = p.CurrentValue?.ToString();
             if (oldVal == newVal) continue;
 
             UpdateLogs.Add(new UpdateLog
@@ -125,12 +123,11 @@ public class TravelAgencyDbContext : DbContext
                 EntityName = entityName,
                 EntityId = entityId,
                 AllotmentId = allotmentId,
-                PropertyName = name,
+                PropertyName = propName,            // προσαρμόζω στο δικό σου schema (Field/OldValue/NewValue)
                 OldValue = oldVal,
                 NewValue = newVal,
                 ChangedAt = whenUtc
             });
         }
     }
-
 }
