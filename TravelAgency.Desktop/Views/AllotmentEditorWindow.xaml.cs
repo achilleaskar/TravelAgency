@@ -1,11 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
-using System.Windows;
-using Microsoft.EntityFrameworkCore;
+﻿using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
-using TravelAgency.Data;
 using TravelAgency.Desktop.ViewModels;
-using TravelAgency.Services;
 
 namespace TravelAgency.Desktop.Views
 {
@@ -15,21 +10,14 @@ namespace TravelAgency.Desktop.Views
         {
             InitializeComponent();
 
-            // Λύνουμε DI από το ServiceProvider της εφαρμογής
-            var sp = ((App)Application.Current).Services;
-            var dbf = sp.GetRequiredService<IDbContextFactory<TravelAgencyDbContext>>();
-            var cache = sp.GetRequiredService<LookupCacheService>();
+            // Πάρε το ServiceProvider από το App.HostRef
+            var sp = App.HostRef!.Services; // <-- αυτό αντί για ((App)Application.Current).Services
 
-            // Δημιούργησε το VM του editor με DI (πρόσθεσε τέτοιο ctor στο VM σου)
-            var vm = new AllotmentEditorViewModel(dbf, cache);
+            // Πάρε το IAllotmentService από DI
+            var svc = sp.GetRequiredService<IAllotmentService>();
 
-            // Όταν ο VM πει "Close(true/false)" κλείσε με DialogResult
-            vm.CloseRequested += ok =>
-            {
-                DialogResult = ok;
-                Close();
-            };
-
+            var vm = new AllotmentEditorViewModel(svc);
+            vm.CloseRequested += ok => { DialogResult = ok; Close(); };
             DataContext = vm;
 
             Loaded += async (_, __) =>

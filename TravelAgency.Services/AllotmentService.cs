@@ -3,12 +3,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using TravelAgency.Data;
+using TravelAgency.Desktop.ViewModels;
 using TravelAgency.Domain.Entities;
 using TravelAgency.Domain.Enums;
 
 namespace TravelAgency.Services;
 
-public class AllotmentService
+public class AllotmentService: IAllotmentService
 {
     private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
 

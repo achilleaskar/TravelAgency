@@ -37,7 +37,7 @@ public partial class App : Application
                     services.AddSingleton<LookupCacheService>();
 
                     // Services already here...
-                    services.AddScoped<AllotmentService>();
+                    services.AddScoped<IAllotmentService, AllotmentService>();
                     services.AddScoped<ReservationService>();
                     services.AddScoped<AlertService>();
 

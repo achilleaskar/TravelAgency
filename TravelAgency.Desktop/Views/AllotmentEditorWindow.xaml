@@ -12,11 +12,7 @@
         Width="1100"
         Height="760"
         Background="White"
-        WindowStartupLocation="CenterOwner">
-    <Window.DataContext>
-        <!-- Προαιρετικά περνά ID μέσω code-behind αν είναι edit -->
-        <vm:AllotmentEditorViewModel />
-    </Window.DataContext>
+        WindowStartupLocation="CenterOwner"> 
     <DockPanel>
         <!-- Header / Actions -->
         <Grid DockPanel.Dock="Top"
@@ -197,7 +193,7 @@
                             CornerRadius="8">
                         <StackPanel Orientation="Horizontal"
                                     HorizontalAlignment="Right"
-                                    Spacing="24">
+                                     >
                             <StackPanel>
                                 <TextBlock Text="Base Cost" />
                                 <TextBlock Text="{Binding BaseCost, StringFormat={}{0:0.##}}"
