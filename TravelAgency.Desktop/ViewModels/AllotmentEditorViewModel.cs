@@ -8,7 +8,11 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using Microsoft.EntityFrameworkCore;
+using TravelAgency.Data;
+using TravelAgency.Domain.Dtos;
 using TravelAgency.Domain.Enums;
+using TravelAgency.Services;
 
 // using TravelAgency.Domain.Entities; // αν θες map
 
@@ -26,9 +30,16 @@ namespace TravelAgency.Desktop.ViewModels
         private int? _allotmentId;
         private bool _isDirty;
 
-        // === ΝΕΟΣ constructor με DI ===
-        public AllotmentEditorViewModel(IAllotmentService svc)
+        private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
+        private readonly LookupCacheService _cache;
+
+        public AllotmentEditorViewModel(
+            IDbContextFactory<TravelAgencyDbContext> dbf,
+            LookupCacheService cache,
+            IAllotmentService svc)
         {
+            _dbf = dbf;
+            _cache = cache;
             _svc = svc;
 
             AddLineCommand = new RelayCommand(_ => AddLine());
@@ -36,7 +47,7 @@ namespace TravelAgency.Desktop.ViewModels
             AddPaymentCommand = new RelayCommand(_ => AddPayment());
             RemoveSelectedPaymentCommand = new RelayCommand(_ => RemoveSelectedPayment(), _ => SelectedPayment != null);
             SaveCommand = new RelayCommand(async _ => await SaveAsync(), _ => CanSave);
-            CancelCommand = new RelayCommand(_ => CloseRequested?.Invoke(false)); // <-- αντί για _nav
+            CancelCommand = new RelayCommand(_ => CloseRequested?.Invoke(false));
 
             Cities = new ObservableCollection<CityVM>();
             Hotels = new ObservableCollection<HotelVM>();
@@ -49,9 +60,6 @@ namespace TravelAgency.Desktop.ViewModels
 
             Lines.CollectionChanged += (_, __) => { RecalcTotals(); MarkDirty(); RaiseCanExec(); };
             Payments.CollectionChanged += (_, __) => { RecalcTotals(); MarkDirty(); RaiseCanExec(); };
-
-            // Προαιρετικά: αρχικοποίηση ως New, ή άσε το window loader να καλέσει Initialize*
-            // _ = InitializeAsNewAsync();
         }
 
         #region Public bindable
@@ -191,25 +199,29 @@ namespace TravelAgency.Desktop.ViewModels
 
         public async Task InitializeForEditAsync(int id)
         {
-            _isNew = false;
-            _allotmentId = id;
-
+            _isNew = false; _allotmentId = id;
             await LoadLookupsAsync();
 
-            var dto = await _svc.LoadAsync(id);
+            await using var db = await _dbf.CreateDbContextAsync();
 
-            Title = dto.Title;
-            SelectedCity = Cities.FirstOrDefault(c => c.Id == dto.CityId);
+            var a = await db.Allotments
+                .Include(x => x.Hotel)
+                .Include(x => x.RoomTypes)
+                .Include(x => x.Payments)
+                .AsNoTracking()
+                .FirstAsync(x => x.Id == id);
+
+            Title = a.Title;
+            SelectedCity = Cities.FirstOrDefault(c => c.Id == (a.Hotel?.CityId ?? 0));
             ApplyHotelFilter();
-            SelectedHotel = FilteredHotels.FirstOrDefault(h => h.Id == dto.HotelId);
-
-            StartDate = dto.StartDateUtc.ToLocalTime().Date;
-            EndDate = dto.EndDateUtc.ToLocalTime().Date;
-            OptionDueDate = dto.OptionDueUtc?.ToLocalTime().Date;
-            DatePolicy = dto.DatePolicy; // "ExactDates" / "PartialAllowed"
+            SelectedHotel = FilteredHotels.FirstOrDefault(h => h.Id == a.HotelId);
+            StartDate = a.StartDate.Date;
+            EndDate = a.EndDate.Date;
+            OptionDueDate = a.OptionDueDate;
+            DatePolicy = a.DatePolicy == AllotmentDatePolicy.PartialAllowed ? "PartialAllowed" : "ExactDates";
 
             Lines.Clear();
-            foreach (var l in dto.Lines)
+            foreach (var l in a.RoomTypes)
             {
                 var vm = new AllotmentLineVM
                 {
@@ -224,13 +236,13 @@ namespace TravelAgency.Desktop.ViewModels
             }
 
             Payments.Clear();
-            foreach (var p in dto.Payments)
+            foreach (var p in a.Payments.OrderBy(p => p.Date))
             {
                 Payments.Add(new PaymentVM
                 {
-                    Date = p.DateUtc.ToLocalTime().Date,
+                    Date = p.Date,
                     Title = p.Title,
-                    Kind = p.Kind,
+                    Kind = p.Kind.ToString(),
                     Amount = p.Amount,
                     Currency = p.Currency,
                     Notes = p.Notes,
@@ -238,15 +250,25 @@ namespace TravelAgency.Desktop.ViewModels
                 });
             }
 
+            // Ιστορικό (αν έχεις UpdateLogs table)
             History.Clear();
-            foreach (var h in dto.History)
+            var logs = await db.UpdateLogs
+                .Where(u => (u.EntityName == "Allotment" && u.EntityId == id)
+                         || (u.EntityName == "AllotmentRoomType" && db.AllotmentRoomTypes.Any(x => x.AllotmentId == id && x.Id == u.EntityId))
+                         || (u.EntityName == "AllotmentPayment" && db.AllotmentPayments.Any(x => x.AllotmentId == id && x.Id == u.EntityId)))
+                .OrderByDescending(u => u.ChangedAt)
+                .Take(200)
+                .AsNoTracking()
+                .ToListAsync();
+
+            foreach (var h in logs)
             {
                 History.Add(new UpdateLogVM
                 {
-                    ChangedAtUtc = h.ChangedAtUtc,
+                    ChangedAtUtc = h.ChangedAt,
                     ChangedBy = h.ChangedBy,
-                    EntityType = h.EntityType,
-                    PropertyName = h.Property,
+                    EntityType = h.EntityName,
+                    PropertyName = h.PropertyName,
                     OldValue = h.OldValue,
                     NewValue = h.NewValue
                 });
@@ -256,6 +278,7 @@ namespace TravelAgency.Desktop.ViewModels
             RecalcTotals();
             RaiseAll();
         }
+
 
         private async Task LoadLookupsAsync()
         {
@@ -338,65 +361,141 @@ namespace TravelAgency.Desktop.ViewModels
             ValidateTitle();
             ValidateDates();
             ValidateLines();
-
             if (!CanSave) return;
 
-            var dto = new AllotmentDto
-            {
-                Id = _allotmentId,
-                Title = Title,
-                CityId = SelectedCity!.Id,
-                HotelId = SelectedHotel!.Id,
-                StartDateUtc = (StartDate ?? DateTime.Today).ToUniversalTime(),
-                EndDateUtc = (EndDate ?? DateTime.Today).ToUniversalTime(),
-                OptionDueUtc = OptionDueDate?.ToUniversalTime(),
-                DatePolicy = DatePolicy,
-                Lines = Lines.Select(l => new AllotmentLineDto
-                {
-                    RoomTypeId = l.RoomType?.Id ?? 0,
-                    Quantity = l.Quantity,
-                    PricePerNight = l.PricePerNight,
-                    Currency = l.Currency,
-                    Notes = l.Notes
-                }).ToList(),
-                Payments = Payments.Select(p => new PaymentDto
-                {
-                    DateUtc = p.Date.ToUniversalTime(),
-                    Title = p.Title,
-                    Kind = p.Kind,
-                    Amount = p.Amount,
-                    Currency = p.Currency,
-                    Notes = p.Notes,
-                    IsVoided = p.IsVoided
-                }).ToList()
-            };
+            await using var db = await _dbf.CreateDbContextAsync();
 
-            var result = await _svc.SaveAsync(dto);
-            if (result.Success)
-            {
-                _isDirty = false;
-                _allotmentId = result.Id;
-                _isNew = false;
-                OnPropertyChanged(nameof(HeaderTitle));
-                RaiseCanExec();
+            // Map DatePolicy string -> enum
+            var policy = DatePolicy == "PartialAllowed"
+                ? AllotmentDatePolicy.PartialAllowed
+                : AllotmentDatePolicy.ExactDates;
 
-                History.Clear();
-                foreach (var h in result.History)
+            if (_isNew)
+            {
+                var a = new TravelAgency.Domain.Entities.Allotment
                 {
-                    History.Add(new UpdateLogVM
+                    Title = Title.Trim(),
+                    HotelId = SelectedHotel!.Id,
+                    StartDate = StartDate!.Value.Date,
+                    EndDate = EndDate!.Value.Date,
+                    OptionDueDate = OptionDueDate,
+                    DatePolicy = policy,
+                    Status = AllotmentStatus.Active,
+                    Notes = null
+                };
+
+                db.Allotments.Add(a);
+                await db.SaveChangesAsync(); // για να πάρουμε Id
+
+                // Lines
+                foreach (var l in Lines)
+                {
+                    db.AllotmentRoomTypes.Add(new TravelAgency.Domain.Entities.AllotmentRoomType
                     {
-                        ChangedAtUtc = h.ChangedAtUtc,
-                        ChangedBy = h.ChangedBy,
-                        EntityType = h.EntityType,
-                        PropertyName = h.Property,
-                        OldValue = h.OldValue,
-                        NewValue = h.NewValue
+                        AllotmentId = a.Id,
+                        RoomTypeId = l.RoomType?.Id ?? 0,
+                        Quantity = l.Quantity,
+                        PricePerNight = l.PricePerNight,
+                        Currency = l.Currency,
+                        Notes = l.Notes
                     });
                 }
-                // Κλείσε το dialog με OK
-                CloseRequested?.Invoke(true);
+
+                // Payments
+                foreach (var p in Payments)
+                {
+                    var kind = Enum.TryParse<PaymentKind>(p.Kind, true, out var k) ? k : PaymentKind.Deposit;
+                    db.AllotmentPayments.Add(new TravelAgency.Domain.Entities.AllotmentPayment
+                    {
+                        AllotmentId = a.Id,
+                        Date = p.Date,
+                        Title = p.Title?.Trim() ?? "Payment",
+                        Kind = kind,
+                        Amount = p.Amount,
+                        Currency = string.IsNullOrWhiteSpace(p.Currency) ? "EUR" : p.Currency!,
+                        Notes = p.Notes,
+                        IsVoided = p.IsVoided
+                    });
+                }
+
+                await db.SaveChangesAsync();
+                _allotmentId = a.Id;
+                _isNew = false;
             }
+            else
+            {
+                // EDIT MODE
+                var a = await db.Allotments
+                    .Include(x => x.RoomTypes)
+                    .Include(x => x.Payments)
+                    .FirstAsync(x => x.Id == _allotmentId!.Value);
+
+                a.Title = Title.Trim();
+                a.HotelId = SelectedHotel!.Id;
+                a.StartDate = StartDate!.Value.Date;
+                a.EndDate = EndDate!.Value.Date;
+                a.OptionDueDate = OptionDueDate;
+                a.DatePolicy = policy;
+                // a.Status      = a.Status;  // ή δώσε UI για αλλαγή status
+                // a.Notes       = ...        // αν θες να δέσεις Notes στο UI
+
+                // Replace Lines (MVP, καθαρό & ασφαλές)
+                db.AllotmentRoomTypes.RemoveRange(a.RoomTypes);
+                foreach (var l in Lines)
+                {
+                    db.AllotmentRoomTypes.Add(new TravelAgency.Domain.Entities.AllotmentRoomType
+                    {
+                        AllotmentId = a.Id,
+                        RoomTypeId = l.RoomType?.Id ?? 0,
+                        Quantity = l.Quantity,
+                        PricePerNight = l.PricePerNight,
+                        Currency = l.Currency,
+                        Notes = l.Notes
+                    });
+                }
+
+                // Replace Payments (MVP)
+                db.AllotmentPayments.RemoveRange(a.Payments);
+                foreach (var p in Payments)
+                {
+                    var kind = Enum.TryParse<PaymentKind>(p.Kind, true, out var k) ? k : PaymentKind.Deposit;
+                    db.AllotmentPayments.Add(new TravelAgency.Domain.Entities.AllotmentPayment
+                    {
+                        AllotmentId = a.Id,
+                        Date = p.Date,
+                        Title = p.Title?.Trim() ?? "Payment",
+                        Kind = kind,
+                        Amount = p.Amount,
+                        Currency = string.IsNullOrWhiteSpace(p.Currency) ? "EUR" : p.Currency!,
+                        Notes = p.Notes,
+                        IsVoided = p.IsVoided
+                    });
+                }
+
+                await db.SaveChangesAsync();
+            }
+
+            // Προαιρετικό: ανανέωσε totals από το service σου (αν θέλεις live refresh στο VM)
+            if (_allotmentId.HasValue)
+            {
+                var (baseCost, paid, balance) = await _svc.GetTotalsAsync(_allotmentId.Value);
+                BaseCost = baseCost;
+                PaidTotal = paid;
+                Balance = balance;
+            }
+            else
+            {
+                RecalcTotals();
+            }
+
+            _isDirty = false;
+            OnPropertyChanged(nameof(HeaderTitle));
+            RaiseCanExec();
+
+            // Κλείσε το dialog με OK
+            CloseRequested?.Invoke(true);
         }
+
 
         #endregion Commands logic
 
@@ -551,12 +650,16 @@ namespace TravelAgency.Desktop.ViewModels
 
         public RoomTypeVM? RoomType
         { get => _roomType; set { if (Set(ref _roomType, value)) Recalc(); } }
+
         public int Quantity
         { get => _quantity; set { if (Set(ref _quantity, value)) Recalc(); } }
+
         public decimal PricePerNight
         { get => _pricePerNight; set { if (Set(ref _pricePerNight, value)) Recalc(); } }
+
         public string Currency
         { get => _currency; set { if (Set(ref _currency, value)) Recalc(); } }
+
         public string? Notes
         { get => _notes; set { Set(ref _notes, value); } }
 
@@ -617,9 +720,8 @@ namespace TravelAgency.Desktop.ViewModels
         public string? NewValue { get; set; }
     }
 
-    
-
     public interface IWindowNavigator
+
     { void CloseWindow(); }
 
     public class RelayCommand : ICommand

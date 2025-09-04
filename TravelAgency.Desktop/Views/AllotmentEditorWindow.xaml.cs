@@ -1,6 +1,9 @@
 ﻿using System.Windows;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using TravelAgency.Data;
 using TravelAgency.Desktop.ViewModels;
+using TravelAgency.Services;
 
 namespace TravelAgency.Desktop.Views
 {
@@ -10,13 +13,12 @@ namespace TravelAgency.Desktop.Views
         {
             InitializeComponent();
 
-            // Πάρε το ServiceProvider από το App.HostRef
-            var sp = App.HostRef!.Services; // <-- αυτό αντί για ((App)Application.Current).Services
+            var sp = App.HostRef!.Services;
+            var dbf = sp.GetRequiredService<IDbContextFactory<TravelAgencyDbContext>>();
+            var cache = sp.GetRequiredService<LookupCacheService>();
+            var svc = sp.GetRequiredService<IAllotmentService>(); // optional but handy
 
-            // Πάρε το IAllotmentService από DI
-            var svc = sp.GetRequiredService<IAllotmentService>();
-
-            var vm = new AllotmentEditorViewModel(svc);
+            var vm = new AllotmentEditorViewModel(dbf, cache, svc);
             vm.CloseRequested += ok => { DialogResult = ok; Close(); };
             DataContext = vm;
 
