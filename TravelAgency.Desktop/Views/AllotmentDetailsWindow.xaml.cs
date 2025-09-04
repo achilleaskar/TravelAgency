@@ -45,7 +45,7 @@ namespace TravelAgency.Desktop.Views
                 .ToDictionaryAsync(x => x.LineId, x => x.Qty);
 
             var logs = await db.UpdateLogs
-                .Where(x => x.EntityType == "Allotment" && x.EntityId == _allotmentId)
+                .Where(x => x.EntityName == "Allotment" && x.EntityId == _allotmentId)
                 .OrderByDescending(x => x.ChangedAt)
                 .Take(100)
                 .AsNoTracking()
@@ -55,9 +55,9 @@ namespace TravelAgency.Desktop.Views
                 .Select(rt =>
                 {
                     var sold = soldByLine.TryGetValue(rt.Id, out var q) ? q : 0;
-                    var baseCapacity = Math.Max(0, rt.QuantityTotal - rt.QuantityCancelled);
+                    var baseCapacity = Math.Max(0, rt.Quantity);
                     var remaining = Math.Max(0, baseCapacity - sold);
-                    return $"{rt.RoomType!.Name}: Total {rt.QuantityTotal}, Cancelled {rt.QuantityCancelled}, " +
+                    return $"{rt.RoomType!.Name}: Total {rt.Quantity}, " +
                            $"Sold {sold}, Remaining {remaining} @ {rt.PricePerNight:0.##} {rt.Currency}";
                 })
                 .ToList();
@@ -74,7 +74,7 @@ namespace TravelAgency.Desktop.Views
                 RoomTypes = roomTypeLines,
                 History = logs.Select(l => new
                 {
-                    Header = $"{l.ChangedAt:u} • {l.Field}",
+                    Header = $"{l.ChangedAt:u} • {l.PropertyName}",
                     Diff = $"{l.OldValue} → {l.NewValue}"
                 }).ToList()
             };

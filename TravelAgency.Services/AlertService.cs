@@ -40,7 +40,7 @@ public class AlertService
                         .SumAsync(x => (int?)x.Qty, ct) ?? 0;
 
                     // NEW: availability per the new model
-                    var available = art.QuantityTotal - art.QuantityCancelled - reservedQty;
+                    var available = art.Quantity- reservedQty;
                     if (qty > available)
                     {
                         await tx.RollbackAsync(ct);

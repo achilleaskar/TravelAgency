@@ -30,6 +30,23 @@ public class AllotmentService
         return await q.AsNoTracking().ToListAsync();
     }
 
+    public async Task<(decimal baseCost, decimal paid, decimal balance)> GetTotalsAsync(int allotmentId, CancellationToken ct = default)
+    {
+        await using var db = await _dbf.CreateDbContextAsync();
+
+        var a = await db.Allotments
+            .Include(x => x.RoomTypes)
+            .Include(x => x.Payments)
+            .AsNoTracking()
+            .FirstAsync(x => x.Id == allotmentId, ct);
+
+        var nights = Math.Max(0, (a.EndDate.Date - a.StartDate.Date).Days);
+        var baseCost = a.RoomTypes.Sum(l => l.Quantity * l.PricePerNight * nights);
+        var paid = a.Payments.Where(p => !p.IsVoided).Sum(p => p.Amount);
+        var balance = baseCost - paid;
+        return (baseCost, paid, balance);
+    }
+
     public async Task<bool> ReserveRoomsAsync(int reservationId, int allotmentRoomTypeId, int qty, CancellationToken ct = default)
     {
         await using var db = await _dbf.CreateDbContextAsync(ct);
@@ -56,7 +73,7 @@ public class AllotmentService
                                     x.Reservation!.Status != ReservationStatus.Cancelled)
                         .SumAsync(x => (int?)x.Qty, ct) ?? 0;
 
-                    var available = art.QuantityTotal - art.QuantityCancelled - reservedQty;
+                    var available = art.Quantity - reservedQty;
                     if (qty > available)
                     {
                         await tx.RollbackAsync(ct);

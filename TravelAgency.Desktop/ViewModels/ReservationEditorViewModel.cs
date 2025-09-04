@@ -181,7 +181,7 @@ namespace TravelAgency.Desktop.ViewModels
                 };
 
             var availableLines = await lineWithSold
-    .Where(x => (x.Line.QuantityTotal - x.Line.QuantityCancelled - x.Sold) > 0)
+    .Where(x => (x.Line.Quantity - x.Sold) > 0)
     .AsNoTracking()
     .ToListAsync();
 
@@ -198,7 +198,7 @@ namespace TravelAgency.Desktop.ViewModels
                         HotelName = any.Allotment!.Hotel!.Name,
                         StartDate = any.Allotment!.StartDate,
                         EndDate = any.Allotment!.EndDate,
-                        RemainingTotal = g.Sum(x => x.Line.QuantityTotal - x.Line.QuantityCancelled - x.Sold)
+                        RemainingTotal = g.Sum(x => x.Line.Quantity - x.Sold)
                     };
                 })
                 .OrderBy(x => x.StartDate)
@@ -239,7 +239,7 @@ namespace TravelAgency.Desktop.ViewModels
             foreach (var l in lines)
             {
                 var sold = soldByLine.TryGetValue(l.Id, out var s) ? s : 0;
-                var remaining = Math.Max(0, l.QuantityTotal - l.QuantityCancelled - sold);
+                var remaining = Math.Max(0, l.Quantity - sold);
                 if (remaining <= 0) continue;
 
                 AddLineCandidates.Add(new AddLineCandidate

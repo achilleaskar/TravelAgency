@@ -1,24 +1,33 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using TravelAgency.Domain.Enums;
 
 namespace TravelAgency.Domain.Entities;
 
+
 public class Allotment : AuditableEntity
 {
     public int Id { get; set; }
+
     public int HotelId { get; set; }
     public Hotel? Hotel { get; set; }
 
-    [MaxLength(200)]
-    public string Title { get; set; } = string.Empty; // optional label
-
-    public DateTime StartDate { get; set; } // inclusive
-    public DateTime EndDate { get; set; } // exclusive (ή inclusive, αρκεί να είμαστε συνεπείς)
-
-    public DateTime? OptionDueDate { get; set; } // deadline πληρωμής προς ξενοδοχείο
+    public string? Title { get; set; }
     public AllotmentStatus Status { get; set; } = AllotmentStatus.Active;
 
-    [Timestamp] public byte[]? RowVersion { get; set; }
+    public DateTime StartDate { get; set; }   // inclusive
+    public DateTime EndDate { get; set; }   // exclusive (προτείνεται)
+    public AllotmentDatePolicy DatePolicy { get; set; } = AllotmentDatePolicy.ExactDates;
+
+    public DateTime? OptionDueDate { get; set; } // κρατάμε το option, χρήσιμο για alerts
 
     public ICollection<AllotmentRoomType> RoomTypes { get; set; } = new List<AllotmentRoomType>();
+    public ICollection<AllotmentPayment> Payments { get; set; } = new List<AllotmentPayment>();
+
+    [NotMapped] public int Nights => Math.Max(0, (EndDate.Date - StartDate.Date).Days);
+
+    // Δυναμικοί υπολογισμοί κόστους (όπως τους θέλεις)
+    [NotMapped] public decimal BaseCost => RoomTypes.Sum(l => l.Quantity * l.PricePerNight * Nights);
+    [NotMapped] public decimal PaidTotal => Payments.Where(p => !p.IsVoided).Sum(p => p.Amount);
+    [NotMapped] public decimal Balance => BaseCost - PaidTotal;
 }

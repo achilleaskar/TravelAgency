@@ -29,4 +29,17 @@
         Warning = 1,
         Danger = 2
     }
+
+    public enum AllotmentDatePolicy
+    {
+        ExactDates = 0,     // οι ημερομηνίες είναι “κλειδωμένες”
+        PartialAllowed = 1  // επιτρέπεται χρήση υποσυνόλου ημερών του range
+    }
+
+    public enum PaymentKind
+    {
+        Deposit = 0,
+        Balance = 1,
+        Other = 2
+    }
 }

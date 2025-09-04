@@ -119,7 +119,7 @@ namespace TravelAgency.Desktop.ViewModels
             // Get all lines for these allotments
             var lines = await db.AllotmentRoomTypes
                                 .Where(l => aIds.Contains(l.AllotmentId))
-                                .Select(l => new { l.Id, l.AllotmentId, l.QuantityTotal, l.QuantityCancelled })
+                                .Select(l => new { l.Id, l.AllotmentId, l.Quantity })
                                 .ToListAsync();
 
             var lineIds = lines.Select(l => l.Id).ToList();
@@ -138,7 +138,7 @@ namespace TravelAgency.Desktop.ViewModels
             foreach (var l in lines)
             {
                 var sold = soldByLine.TryGetValue(l.Id, out var s) ? s : 0;
-                var remaining = Math.Max(0, l.QuantityTotal - l.QuantityCancelled - sold);
+                var remaining = Math.Max(0, l.Quantity - sold);
                 remainByAllot[l.AllotmentId] += remaining;
             }
 
@@ -235,8 +235,7 @@ namespace TravelAgency.Desktop.ViewModels
                     {
                         AllotmentId = a.Id,
                         RoomTypeId = l.RoomTypeId,
-                        QuantityTotal = l.QuantityTotal,
-                        QuantityCancelled = l.QuantityCancelled,
+                        Quantity = l.Quantity,
                         PricePerNight = l.PricePerNight,
                         Currency = l.Currency
                     });
@@ -263,8 +262,7 @@ namespace TravelAgency.Desktop.ViewModels
                     {
                         AllotmentId = a.Id,
                         RoomTypeId = l.RoomTypeId,
-                        QuantityTotal = l.QuantityTotal,
-                        QuantityCancelled = l.QuantityCancelled,
+                        Quantity  = l.Quantity,
                         PricePerNight = l.PricePerNight,
                         Currency = l.Currency
                     });
@@ -324,8 +322,7 @@ namespace TravelAgency.Desktop.ViewModels
                 {
                     RoomTypeId = LineRoomType.Id,
                     RoomType = LineRoomType,
-                    QuantityTotal = total,
-                    QuantityCancelled = 0,
+                    Quantity  = total,
                     Sold = 0,
                     PricePerNight = price,
                     Currency = string.IsNullOrWhiteSpace(LineCurrency) ? "EUR" : LineCurrency!
@@ -335,7 +332,7 @@ namespace TravelAgency.Desktop.ViewModels
             {
                 SelectedLine.RoomTypeId = LineRoomType.Id;
                 SelectedLine.RoomType = LineRoomType;
-                SelectedLine.QuantityTotal = total;
+                SelectedLine.Quantity= total;
                 // keep existing Cancelled & Sold
                 SelectedLine.PricePerNight = price;
                 SelectedLine.Currency = string.IsNullOrWhiteSpace(LineCurrency) ? "EUR" : LineCurrency!;
@@ -351,32 +348,6 @@ namespace TravelAgency.Desktop.ViewModels
             if (SelectedLine == null) return;
             Lines.Remove(SelectedLine);
             ResetLineEditor();
-        }
-
-        [RelayCommand]
-        private void CancelUnits()
-        {
-            if (SelectedLine == null) return;
-            if (!int.TryParse(LineCancelQty ?? "0", out var qty) || qty <= 0) return;
-
-            var maxCancellable = SelectedLine.QuantityTotal - SelectedLine.Sold - SelectedLine.QuantityCancelled;
-            if (maxCancellable <= 0) return;
-
-            var delta = Math.Min(qty, maxCancellable);
-            SelectedLine.QuantityCancelled += delta;
-            LineCancelQty = "";
-            OnPropertyChanged(nameof(Lines));
-        }
-
-        [RelayCommand]
-        private void CancelRemaining()
-        {
-            if (SelectedLine == null) return;
-            var maxCancellable = SelectedLine.QuantityTotal - SelectedLine.Sold - SelectedLine.QuantityCancelled;
-            if (maxCancellable <= 0) return;
-
-            SelectedLine.QuantityCancelled += maxCancellable;
-            OnPropertyChanged(nameof(Lines));
         }
 
         private void ResetLineEditor()
@@ -419,8 +390,7 @@ namespace TravelAgency.Desktop.ViewModels
                     Id = l.Id,
                     RoomTypeId = l.RoomTypeId,
                     RoomType = l.RoomType,
-                    QuantityTotal = l.QuantityTotal,
-                    QuantityCancelled = l.QuantityCancelled,
+                    Quantity  = l.Quantity,
                     Sold = sold,
                     PricePerNight = l.PricePerNight,
                     Currency = l.Currency
@@ -434,10 +404,9 @@ namespace TravelAgency.Desktop.ViewModels
             public int Id { get; set; }
             public int RoomTypeId { get; set; }
             public RoomType RoomType { get; set; } = null!;
-            public int QuantityTotal { get; set; }
-            public int QuantityCancelled { get; set; }
+            public int Quantity  { get; set; }
             public int Sold { get; set; }
-            public int Remaining => Math.Max(0, QuantityTotal - QuantityCancelled - Sold);
+            public int Remaining => Math.Max(0, Quantity - Sold);
             public decimal PricePerNight { get; set; }
             public string Currency { get; set; } = "EUR";
         }

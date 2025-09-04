@@ -22,7 +22,7 @@ namespace TravelAgency.Desktop.Views
         {
             var h = await db.Hotels.Include(x => x.City).AsNoTracking().FirstAsync(x => x.Id == _hotelId);
             var logs = await db.UpdateLogs
-                .Where(x => x.EntityType == "Hotel" && x.EntityId == _hotelId)
+                .Where(x => x.EntityName == "Hotel" && x.EntityId == _hotelId)
                 .OrderByDescending(x => x.ChangedAt)
                 .Take(100)
                 .AsNoTracking()
@@ -39,7 +39,7 @@ namespace TravelAgency.Desktop.Views
                 CreatedUpdated = $"Created: {h.CreatedAt:u} | Updated: {h.UpdatedAt:u}",
                 History = logs.Select(l => new
                 {
-                    Header = $"{l.ChangedAt:u} • {l.Field}",
+                    Header = $"{l.ChangedAt:u} • {l.PropertyName}",
                     Diff = $"{l.OldValue} → {l.NewValue}"
                 }).ToList()
             };

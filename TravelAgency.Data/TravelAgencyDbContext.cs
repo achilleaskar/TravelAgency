@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TravelAgency.Domain.Entities;
 
 namespace TravelAgency.Data;
@@ -14,6 +15,8 @@ public class TravelAgencyDbContext : DbContext
     public DbSet<Reservation> Reservations => Set<Reservation>();
     public DbSet<ReservationItem> ReservationItems => Set<ReservationItem>();
     public DbSet<Payment> Payments => Set<Payment>();
+
+    public DbSet<AllotmentPayment> AllotmentPayments => Set<AllotmentPayment>();
     public DbSet<UpdateLog> UpdateLogs => Set<UpdateLog>();
 
 
@@ -26,6 +29,9 @@ public class TravelAgencyDbContext : DbContext
         b.Entity<City>().HasIndex(x => new { x.Name, x.Country }).IsUnique();
         b.Entity<Hotel>().HasIndex(x => new { x.Name, x.CityId });
         b.Entity<RoomType>().HasIndex(x => x.Code).IsUnique();
+
+        b.Entity<AllotmentRoomType>().Property(p => p.PricePerNight).HasPrecision(18, 2);
+        b.Entity<AllotmentPayment>().Property(p => p.Amount).HasPrecision(18, 2);
 
         b.Entity<Allotment>().HasIndex(x => x.OptionDueDate);
         b.Entity<Allotment>().HasMany(x => x.RoomTypes).WithOne(x => x.Allotment).HasForeignKey(x => x.AllotmentId);
@@ -45,71 +51,86 @@ public class TravelAgencyDbContext : DbContext
         b.Entity<Hotel>().Property(x => x.Notes).HasMaxLength(2000);
         b.Entity<Allotment>().Property(x => x.Notes).HasMaxLength(2000);
         b.Entity<Reservation>().Property(x => x.Notes).HasMaxLength(2000);
-
-        b.Entity<UpdateLog>().HasIndex(x => new { x.EntityType, x.EntityId, x.ChangedAt });
-
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        var utcNow = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
 
-        // set CreatedAt/UpdatedAt
-        foreach (var entry in ChangeTracker.Entries<AuditableEntity>())
+        foreach (var e in ChangeTracker.Entries())
         {
-            if (entry.State == EntityState.Added)
+            if (e.Entity is Allotment a)
             {
-                entry.Entity.CreatedAt = utcNow;
-                entry.Entity.UpdatedAt = utcNow;
+                if (e.State == EntityState.Added) { a.CreatedAt = a.UpdatedAt = now; }
+                if (e.State == EntityState.Modified) a.UpdatedAt = now;
             }
-            else if (entry.State == EntityState.Modified)
+            if (e.Entity is AllotmentRoomType art)
             {
-                entry.Entity.UpdatedAt = utcNow;
+                if (e.State == EntityState.Added) { art.CreatedAt = art.UpdatedAt = now; }
+                if (e.State == EntityState.Modified) art.UpdatedAt = now;
             }
-        }
-
-        // gather change logs
-        var logs = new List<UpdateLog>();
-        foreach (var entry in ChangeTracker.Entries())
-        {
-            if (entry.State != EntityState.Modified) continue;
-            if (entry.Entity is not AuditableEntity auditable) continue;
-
-            var entityType = entry.Entity.GetType().Name;
-            // Try to get an integer id property named "Id"
-            var idProp = entry.Property("Id");
-            var entityId = idProp?.CurrentValue is int i ? i : 0;
-
-            foreach (var prop in entry.Properties)
+            if (e.Entity is AllotmentPayment pay)
             {
-                if (!prop.IsModified) continue;
-                if (prop.Metadata.Name is "UpdatedAt" or "CreatedAt") continue; // skip auto fields
-
-                var oldVal = prop.OriginalValue?.ToString();
-                var newVal = prop.CurrentValue?.ToString();
-                if (oldVal == newVal) continue;
-
-                logs.Add(new UpdateLog
-                {
-                    EntityType = entityType,
-                    EntityId = entityId,
-                    ChangedAt = utcNow,
-                    ChangedBy = null, // plug user later
-                    Field = prop.Metadata.Name,
-                    OldValue = oldVal,
-                    NewValue = newVal
-                });
+                if (e.State == EntityState.Added) { pay.CreatedAt = now; }
             }
         }
 
-        var result = await base.SaveChangesAsync(cancellationToken);
-
-        if (logs.Count > 0)
+        // Audit μόνο για Allotment & AllotmentRoomType
+        foreach (var entry in ChangeTracker.Entries()
+                                           .Where(x => x.State == EntityState.Modified &&
+                                                       (x.Entity is Allotment || x.Entity is AllotmentRoomType)))
         {
-            UpdateLogs.AddRange(logs);
-            await base.SaveChangesAsync(cancellationToken);
+            WriteChangeLogs(entry, now);
         }
-        return result;
+
+        return await base.SaveChangesAsync(cancellationToken);
+    }
+
+    private void WriteChangeLogs(EntityEntry entry, DateTime whenUtc)
+    {
+        string entityName;
+        int entityId;
+        int? allotmentId = null;
+
+        switch (entry.Entity)
+        {
+            case Allotment a:
+                entityName = nameof(Allotment);
+                entityId = a.Id;
+                allotmentId = a.Id;
+                break;
+            case AllotmentRoomType art:
+                entityName = nameof(AllotmentRoomType);
+                entityId = art.Id;
+                allotmentId = art.AllotmentId;
+                break;
+            default:
+                return;
+        }
+
+        foreach (var prop in entry.Properties)
+        {
+            if (!prop.IsModified) continue;
+
+            var name = prop.Metadata.Name;
+            if (name is nameof(Allotment.UpdatedAt) or nameof(AllotmentRoomType.UpdatedAt))
+                continue;
+
+            var oldVal = prop.OriginalValue?.ToString();
+            var newVal = prop.CurrentValue?.ToString();
+            if (oldVal == newVal) continue;
+
+            UpdateLogs.Add(new UpdateLog
+            {
+                EntityName = entityName,
+                EntityId = entityId,
+                AllotmentId = allotmentId,
+                PropertyName = name,
+                OldValue = oldVal,
+                NewValue = newVal,
+                ChangedAt = whenUtc
+            });
+        }
     }
 
 }

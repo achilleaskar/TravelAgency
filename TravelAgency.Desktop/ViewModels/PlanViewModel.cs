@@ -127,7 +127,7 @@ namespace TravelAgency.Desktop.ViewModels
                 {
                     var row = new PlanRowVM
                     {
-                        Label = $"{a.Hotel!.Name} · {rt.RoomType!.Name} ({rt.QuantityTotal}) · {a.StartDate:dd/MM}-{a.EndDate:dd/MM}"
+                        Label = $"{a.Hotel!.Name} · {rt.RoomType!.Name} ({rt.Quantity}) · {a.StartDate:dd/MM}-{a.EndDate:dd/MM}"
                     };
 
                     for (var day = rangeStart; day < rangeEndEx; day = day.AddDays(1))
@@ -139,7 +139,7 @@ namespace TravelAgency.Desktop.ViewModels
                         }
 
                         dayReserved.TryGetValue((rt.Id, day), out var reservedQty);
-                        var free = Math.Max(0, rt.QuantityTotal - rt.QuantityCancelled - reservedQty);
+                        var free = Math.Max(0, rt.Quantity  - reservedQty);
 
                         PlanCellState state;
                         if (free == 0)
@@ -163,7 +163,7 @@ namespace TravelAgency.Desktop.ViewModels
                         {
                             State = state,
                             Text = free > 0 ? free.ToString() : "0",
-                            Tooltip = $"{a.Title} | Free: {free}/{rt.QuantityTotal}\nPrice: {rt.PricePerNight:0.##} {rt.Currency}"
+                            Tooltip = $"{a.Title} | Free: {free}/{rt.Quantity}\nPrice: {rt.PricePerNight:0.##} {rt.Currency}"
                         });
                     }
 

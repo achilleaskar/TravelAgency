@@ -28,7 +28,7 @@ namespace TravelAgency.Desktop.Views
                 .FirstAsync(x => x.Id == _reservationId);
 
             var logs = await db.UpdateLogs
-                .Where(x => x.EntityType == "Reservation" && x.EntityId == _reservationId)
+                .Where(x => x.EntityName == "Reservation" && x.EntityId == _reservationId)
                 .OrderByDescending(x => x.ChangedAt).Take(100)
                 .AsNoTracking().ToListAsync();
 
@@ -61,7 +61,7 @@ namespace TravelAgency.Desktop.Views
                 Payments = payments,
                 History = logs.Select(l => new
                 {
-                    Header = $"{l.ChangedAt:u} • {l.Field}",
+                    Header = $"{l.ChangedAt:u} • {l.PropertyName}",
                     Diff = $"{l.OldValue} → {l.NewValue}"
                 }).ToList()
             };

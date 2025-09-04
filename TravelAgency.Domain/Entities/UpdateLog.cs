@@ -2,14 +2,17 @@
 {
     public class UpdateLog
     {
-        public int Id { get; set; }
-        public string EntityType { get; set; } = ""; // "Hotel", "Customer", etc.
+        public long Id { get; set; }
+        public string EntityName { get; set; } = ""; // "Allotment" / "AllotmentRoomType"
         public int EntityId { get; set; }
-        public DateTime ChangedAt { get; set; }      // UTC
-        public string? ChangedBy { get; set; }       // optional, set to current user if you add auth later
-        public string Field { get; set; } = "";      // property name
+        public string PropertyName { get; set; } = "";
         public string? OldValue { get; set; }
         public string? NewValue { get; set; }
-        public string? Note { get; set; }            // optional comment
+
+        public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
+        public string? ChangedBy { get; set; } // optional (αν αργότερα βάλεις users)
+
+        // ευκολία: να μπορείς να δεις ιστορικό ανά allotment
+        public int? AllotmentId { get; set; }
     }
 }
