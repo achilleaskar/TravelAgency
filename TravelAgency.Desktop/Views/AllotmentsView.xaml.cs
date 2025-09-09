@@ -1,4 +1,5 @@
 ﻿using System.Windows.Controls;
+using System.Windows.Input;
 using Microsoft.Extensions.DependencyInjection;
 using TravelAgency.Desktop.ViewModels;
 
@@ -21,6 +22,15 @@ namespace TravelAgency.Desktop.Views
             {
                 _first = false;
                 await vm.LoadCommand.ExecuteAsync(null);
+            }
+        }
+
+        private async void AllotmentsGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (DataContext is AllotmentsViewModel vm &&
+                vm.OpenEditDialogCommand.CanExecute(null))
+            {
+                await vm.OpenEditDialogCommand.ExecuteAsync(null);
             }
         }
     }

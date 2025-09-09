@@ -25,10 +25,12 @@ public partial class App : Application
                 {
                     // Use a factory to avoid concurrent DbContext usage
                     var cs = ctx.Configuration.GetConnectionString("MySql")!;
-                    services.AddDbContextFactory<TravelAgencyDbContext>(opt =>
+                    services.AddPooledDbContextFactory<TravelAgencyDbContext>(opt =>
                     {
-                        opt.UseMySql(cs, ServerVersion.AutoDetect(cs), b => b.CommandTimeout(15));
-                    });
+                        opt.UseMySql(cs, ServerVersion.AutoDetect(cs), b => b.CommandTimeout(60));
+                        // optional defaults you might like for perf:
+                        // opt.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+                    }, poolSize: 128); // pick 64–256 typically; adjust to your workload
 
                     // Register the UI dispatcher (WPF)
                     services.AddSingleton<IUiDispatcher, Infrastructure.WpfUiDispatcher>();

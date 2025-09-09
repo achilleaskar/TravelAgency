@@ -9,7 +9,7 @@
         public string? OldValue { get; set; }
         public string? NewValue { get; set; }
 
-        public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
+        public DateTime ChangedAtUtc { get; set; } = DateTime.UtcNow;
         public string? ChangedBy { get; set; } // optional (αν αργότερα βάλεις users)
 
         // ευκολία: να μπορείς να δεις ιστορικό ανά allotment

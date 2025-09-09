@@ -11,8 +11,13 @@
         Title="Allotment"
         Width="1100"
         Height="760"
+        xmlns:local="clr-namespace:TravelAgency.Desktop.Views"
         Background="White"
-        WindowStartupLocation="CenterOwner"> 
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <local:BindingProxy x:Key="VmProxy"
+                            Data="{Binding}" />
+    </Window.Resources>
     <DockPanel>
         <!-- Header / Actions -->
         <Grid DockPanel.Dock="Top"
@@ -30,7 +35,6 @@
             <Button Grid.Column="1"
                     Content="Save"
                     Padding="16,6"
-                    IsEnabled="{Binding CanSave}"
                     Command="{Binding SaveCommand}" />
             <Button Grid.Column="3"
                     Content="Cancel"
@@ -59,7 +63,7 @@
                             CornerRadius="8">
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="160" />
+                                <ColumnDefinition Width="100" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
@@ -106,14 +110,14 @@
                                        IsEditable="False" />
                             <TextBlock Grid.Row="6"
                                        Grid.Column="0"
-                                       Text="Start Date"
+                                       Text="From"
                                        VerticalAlignment="Center" />
                             <DatePicker Grid.Row="6"
                                         Grid.Column="1"
                                         SelectedDate="{Binding StartDate, ValidatesOnDataErrors=True}" />
                             <TextBlock Grid.Row="8"
                                        Grid.Column="0"
-                                       Text="End Date"
+                                       Text="To"
                                        VerticalAlignment="Center" />
                             <DatePicker Grid.Row="8"
                                         Grid.Column="1"
@@ -122,16 +126,17 @@
                                        Grid.Column="0"
                                        Text="Date Policy"
                                        VerticalAlignment="Center" />
-                            <ComboBox  Grid.Row="10"
-                                       Grid.Column="1"
-                                       SelectedItem="{Binding DatePolicy}"
-                                       IsEditable="False">
+                            <ComboBox Grid.Row="10"
+                                      Grid.Column="1"
+                                      SelectedValue="{Binding AllotmentDatePolicy}"
+                                      SelectedValuePath="Content"
+                                      IsEditable="False">
                                 <ComboBoxItem Content="ExactDates" />
                                 <ComboBoxItem Content="PartialAllowed" />
                             </ComboBox>
                             <TextBlock Grid.Row="12"
                                        Grid.Column="0"
-                                       Text="Option Due (optional)"
+                                       Text="Option Due"
                                        VerticalAlignment="Center" />
                             <DatePicker Grid.Row="12"
                                         Grid.Column="1"
@@ -162,9 +167,10 @@
                             <DataGrid.Columns>
                                 <DataGridComboBoxColumn Header="Room Type"
                                                         Width="220"
-                                                        SelectedItemBinding="{Binding RoomType, UpdateSourceTrigger=PropertyChanged}"
+                                                        ItemsSource="{Binding Data.RoomTypes, Source={StaticResource VmProxy}}"
                                                         DisplayMemberPath="Name"
-                                                        ItemsSource="{Binding DataContext.RoomTypes, RelativeSource={RelativeSource AncestorType=DataGrid}}" />
+                                                        SelectedValuePath="Id"
+                                                        SelectedValueBinding="{Binding RoomTypeId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                                 <DataGridTextColumn Header="Qty"
                                                     Width="80"
                                                     Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0}}" />
@@ -175,6 +181,7 @@
                                                     Width="90"
                                                     Binding="{Binding Currency, UpdateSourceTrigger=PropertyChanged}" />
                                 <DataGridTextColumn Header="Notes"
+                                                    MinWidth="80"
                                                     Width="*"
                                                     Binding="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
                                 <DataGridTextColumn Header="Line Total"

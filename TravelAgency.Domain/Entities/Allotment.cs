@@ -22,7 +22,7 @@ public class Allotment : AuditableEntity
     public AllotmentStatus Status { get; set; } = AllotmentStatus.Active;
 
     // ΝΕΟ: πολιτική ημερομηνιών (όπως ζήτησες)
-    public AllotmentDatePolicy DatePolicy { get; set; } = AllotmentDatePolicy.ExactDates;
+    public AllotmentDatePolicy AllotmentDatePolicy { get; set; } = AllotmentDatePolicy.ExactDates;
 
     public ICollection<AllotmentRoomType> RoomTypes { get; set; } = new List<AllotmentRoomType>();
     public ICollection<AllotmentPayment> Payments { get; set; } = new List<AllotmentPayment>();

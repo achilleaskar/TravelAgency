@@ -70,6 +70,10 @@ public class TravelAgencyDbContext : DbContext
             {
                 e.Entity.UpdatedAt = now;
             }
+            else if (e.State == EntityState.Deleted)
+            {
+                e.Entity.UpdatedAt = now;
+            }
         }
 
         // Audit μόνο για Allotment & AllotmentRoomType
@@ -126,7 +130,7 @@ public class TravelAgencyDbContext : DbContext
                 PropertyName = propName,            // προσαρμόζω στο δικό σου schema (Field/OldValue/NewValue)
                 OldValue = oldVal,
                 NewValue = newVal,
-                ChangedAt = whenUtc
+                ChangedAtUtc = whenUtc
             });
         }
     }

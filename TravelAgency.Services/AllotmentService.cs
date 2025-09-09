@@ -15,11 +15,8 @@ namespace TravelAgency.Services
     public class AllotmentService : IAllotmentService
     {
         private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
+        public AllotmentService(IDbContextFactory<TravelAgencyDbContext> dbf) => _dbf = dbf;
 
-        public AllotmentService(IDbContextFactory<TravelAgencyDbContext> dbf)
-            => _dbf = dbf;
-
-        // -------- Lookups --------
         public async Task<(IEnumerable<CityVM> cities, IEnumerable<HotelVM> hotels, IEnumerable<RoomTypeVM> roomTypes)> LoadLookupsAsync()
         {
             await using var db = await _dbf.CreateDbContextAsync();
@@ -45,15 +42,14 @@ namespace TravelAgency.Services
             return (cities, hotels, roomTypes);
         }
 
-        // -------- Load by Id (for edit) --------
         public async Task<AllotmentDto> LoadAsync(int id)
         {
             await using var db = await _dbf.CreateDbContextAsync();
 
             var a = await db.Allotments
                 .Include(x => x.Hotel)
-                .Include(x => x.RoomTypes)
-                .Include(x => x.Payments)
+                .Include(x => x.RoomTypes) // AllotmentRoomType
+                .Include(x => x.Payments)  // AllotmentPayment
                 .AsNoTracking()
                 .FirstAsync(x => x.Id == id);
 
@@ -61,22 +57,21 @@ namespace TravelAgency.Services
             {
                 Id = a.Id,
                 Title = a.Title,
-                CityId = a.Hotel?.CityId ?? 0,
+                CityId = a.Hotel?.CityId ?? 0,     // UI filter
                 HotelId = a.HotelId,
                 StartDateUtc = a.StartDate.ToUniversalTime(),
                 EndDateUtc = a.EndDate.ToUniversalTime(),
                 OptionDueUtc = a.OptionDueDate?.ToUniversalTime(),
-                DatePolicy = a.DatePolicy == AllotmentDatePolicy.PartialAllowed ? "PartialAllowed" : "ExactDates",
-                Lines = a.RoomTypes
-                    .Select(l => new AllotmentLineDto
-                    {
-                        RoomTypeId = l.RoomTypeId,
-                        Quantity = l.Quantity,
-                        PricePerNight = l.PricePerNight,
-                        Currency = l.Currency,
-                        Notes = l.Notes
-                    })
-                    .ToList(),
+                AllotmentDatePolicy = a.AllotmentDatePolicy == AllotmentDatePolicy.PartialAllowed ? "PartialAllowed" : "ExactDates",
+                Lines = a.RoomTypes.Select(l => new AllotmentLineDto
+                {
+                    Id = l.Id,
+                    RoomTypeId = l.RoomTypeId,
+                    Quantity = l.Quantity,
+                    PricePerNight = l.PricePerNight,
+                    Currency = l.Currency,
+                    Notes = l.Notes
+                }).ToList(),
                 Payments = a.Payments
                     .OrderBy(p => p.Date)
                     .Select(p => new PaymentDto
@@ -88,12 +83,11 @@ namespace TravelAgency.Services
                         Currency = p.Currency,
                         Notes = p.Notes,
                         IsVoided = p.IsVoided
-                    })
-                    .ToList(),
-                History = new List<HistoryDto>() // γεμίζει παρακάτω αν υπάρχει πίνακας logs
+                    }).ToList(),
+                History = new List<HistoryDto>()
             };
 
-            // Optional: Load history (αν έχεις UpdateLogs table)
+            // Optional UpdateLogs (EntityName / PropertyName)
             if (db.UpdateLogs != null)
             {
                 var lineIds = await db.AllotmentRoomTypes
@@ -108,10 +102,10 @@ namespace TravelAgency.Services
 
                 var logs = await db.UpdateLogs
                     .Where(u =>
-                           (u.EntityName == nameof(Allotment) && u.EntityId == id) ||
-                           (u.EntityName == nameof(AllotmentRoomType) && lineIds.Contains(u.EntityId)) ||
-                           (u.EntityName == nameof(AllotmentPayment) && paymentIds.Contains(u.EntityId)))
-                    .OrderByDescending(u => u.ChangedAt)
+                        (u.EntityName == nameof(Allotment) && u.EntityId == id) ||
+                        (u.EntityName == nameof(AllotmentRoomType) && lineIds.Contains(u.EntityId)) ||
+                        (u.EntityName == nameof(AllotmentPayment) && paymentIds.Contains(u.EntityId)))
+                    .OrderByDescending(u => u.ChangedAtUtc)
                     .Take(200)
                     .AsNoTracking()
                     .ToListAsync();
@@ -120,10 +114,10 @@ namespace TravelAgency.Services
                 {
                     dto.History.Add(new HistoryDto
                     {
-                        ChangedAtUtc = h.ChangedAt,
+                        ChangedAtUtc = h.ChangedAtUtc,
                         ChangedBy = h.ChangedBy,
-                        EntityType = h.EntityName,
-                        Property = h.PropertyName,
+                        EntityName = h.EntityName,          // <-- correct name
+                        PropertyName = h.PropertyName,      // <-- correct name
                         OldValue = h.OldValue,
                         NewValue = h.NewValue
                     });
@@ -133,15 +127,14 @@ namespace TravelAgency.Services
             return dto;
         }
 
-        // -------- Save (new or edit) --------
         public async Task<SaveResult> SaveAsync(AllotmentDto dto)
         {
             await using var db = await _dbf.CreateDbContextAsync();
 
-            // map string -> enum
-            var policy = dto.DatePolicy == "PartialAllowed" ? AllotmentDatePolicy.PartialAllowed : AllotmentDatePolicy.ExactDates;
+            var policy = dto.AllotmentDatePolicy == "PartialAllowed"
+                ? AllotmentDatePolicy.PartialAllowed
+                : AllotmentDatePolicy.ExactDates;
 
-            // CityId έρχεται μόνο για filtering στα lookups — ο entity κρατά HotelId
             Allotment entity;
 
             if (dto.Id == null)
@@ -153,13 +146,12 @@ namespace TravelAgency.Services
                     StartDate = dto.StartDateUtc.ToLocalTime().Date,
                     EndDate = dto.EndDateUtc.ToLocalTime().Date,
                     OptionDueDate = dto.OptionDueUtc?.ToLocalTime().Date,
-                    DatePolicy = policy,
+                    AllotmentDatePolicy = policy,
                     Status = AllotmentStatus.Active
                 };
                 db.Allotments.Add(entity);
                 await db.SaveChangesAsync();
 
-                // Lines
                 foreach (var l in dto.Lines)
                 {
                     db.AllotmentRoomTypes.Add(new AllotmentRoomType
@@ -173,7 +165,6 @@ namespace TravelAgency.Services
                     });
                 }
 
-                // Payments
                 foreach (var p in dto.Payments)
                 {
                     var kind = Enum.TryParse<PaymentKind>(p.Kind, true, out var k) ? k : PaymentKind.Deposit;
@@ -191,13 +182,7 @@ namespace TravelAgency.Services
                 }
 
                 await db.SaveChangesAsync();
-
-                return new SaveResult
-                {
-                    Success = true,
-                    Id = entity.Id,
-                    History = new List<HistoryDto>() // αν κρατάς logs, γέμισέ το εδώ
-                };
+                return new SaveResult { Success = true, Id = entity.Id };
             }
             else
             {
@@ -206,55 +191,112 @@ namespace TravelAgency.Services
                     .Include(x => x.Payments)
                     .FirstAsync(x => x.Id == dto.Id.Value);
 
+                // ---------- parent fields ----------
                 entity.Title = dto.Title.Trim();
                 entity.HotelId = dto.HotelId;
                 entity.StartDate = dto.StartDateUtc.ToLocalTime().Date;
                 entity.EndDate = dto.EndDateUtc.ToLocalTime().Date;
                 entity.OptionDueDate = dto.OptionDueUtc?.ToLocalTime().Date;
-                entity.DatePolicy = policy;
+                entity.AllotmentDatePolicy = policy;
 
-                // Replace Lines (MVP)
-                db.AllotmentRoomTypes.RemoveRange(entity.RoomTypes);
+                // ======== SNAPSHOTS (originals before we mutate) ========
+                var originalLinesById = entity.RoomTypes.ToDictionary(r => r.Id);
+                var originalLinesByRoomType = entity.RoomTypes
+                                                    .GroupBy(r => r.RoomTypeId)
+                                                    .ToDictionary(g => g.Key, g => g.First()); // in case of uniqueness
+                var keepLineIds = new HashSet<int>();
+
+                var originalPaysById = entity.Payments.ToDictionary(p => p.Id);
+                var keepPayIds = new HashSet<int>();
+
+                // ---------- RoomTypes upsert ----------
                 foreach (var l in dto.Lines)
                 {
-                    db.AllotmentRoomTypes.Add(new AllotmentRoomType
+                    AllotmentRoomType target = null!;
+
+                    // 1) prefer Id-based update if provided
+                    if (l.Id is int lid && lid > 0 && originalLinesById.TryGetValue(lid, out var byId))
                     {
-                        AllotmentId = entity.Id,
-                        RoomTypeId = l.RoomTypeId,
-                        Quantity = l.Quantity,
-                        PricePerNight = l.PricePerNight,
-                        Currency = string.IsNullOrWhiteSpace(l.Currency) ? "EUR" : l.Currency!,
-                        Notes = l.Notes
-                    });
+                        target = byId;
+                        keepLineIds.Add(lid);
+                    }
+                    // 2) otherwise, try match by natural key (one line per RoomTypeId)
+                    else if (originalLinesByRoomType.TryGetValue(l.RoomTypeId, out var byRt))
+                    {
+                        target = byRt;
+                        keepLineIds.Add(byRt.Id);
+                    }
+
+                    if (target != null)
+                    {
+                        // update existing
+                        target.RoomTypeId = l.RoomTypeId;
+                        target.Quantity = l.Quantity;
+                        target.PricePerNight = l.PricePerNight;
+                        target.Currency = string.IsNullOrWhiteSpace(l.Currency) ? "EUR" : l.Currency!;
+                        target.Notes = l.Notes;
+                    }
+                    else
+                    {
+                        // insert new
+                        entity.RoomTypes.Add(new AllotmentRoomType
+                        {
+                            RoomTypeId = l.RoomTypeId,
+                            Quantity = l.Quantity,
+                            PricePerNight = l.PricePerNight,
+                            Currency = string.IsNullOrWhiteSpace(l.Currency) ? "EUR" : l.Currency!,
+                            Notes = l.Notes
+                        });
+                        // do NOT add to keepLineIds (no Id yet); we only delete from the original snapshot
+                    }
                 }
 
-                // Replace Payments (MVP)
-                db.AllotmentPayments.RemoveRange(entity.Payments);
+                // delete only original lines that are no longer present
+                foreach (var line in originalLinesById.Values.Where(x => !keepLineIds.Contains(x.Id)))
+                    db.AllotmentRoomTypes.Remove(line);
+
+                // ---------- Payments upsert ----------
                 foreach (var p in dto.Payments)
                 {
                     var kind = Enum.TryParse<PaymentKind>(p.Kind, true, out var k) ? k : PaymentKind.Deposit;
-                    db.AllotmentPayments.Add(new AllotmentPayment
+
+                    if (p.Id is int pid && pid > 0 && originalPaysById.TryGetValue(pid, out var found))
                     {
-                        AllotmentId = entity.Id,
-                        Date = p.DateUtc.ToLocalTime().Date,
-                        Title = string.IsNullOrWhiteSpace(p.Title) ? "Payment" : p.Title.Trim(),
-                        Kind = kind,
-                        Amount = p.Amount,
-                        Currency = string.IsNullOrWhiteSpace(p.Currency) ? "EUR" : p.Currency!,
-                        Notes = p.Notes,
-                        IsVoided = p.IsVoided
-                    });
+                        // update existing
+                        found.Date = p.DateUtc.ToLocalTime().Date;
+                        found.Title = string.IsNullOrWhiteSpace(p.Title) ? "Payment" : p.Title.Trim();
+                        found.Kind = kind;
+                        found.Amount = p.Amount;
+                        found.Currency = string.IsNullOrWhiteSpace(p.Currency) ? "EUR" : p.Currency!;
+                        found.Notes = p.Notes;
+                        found.IsVoided = p.IsVoided;
+                        keepPayIds.Add(pid);
+                    }
+                    else
+                    {
+                        // insert new
+                        entity.Payments.Add(new AllotmentPayment
+                        {
+                            Date = p.DateUtc.ToLocalTime().Date,
+                            Title = string.IsNullOrWhiteSpace(p.Title) ? "Payment" : p.Title.Trim(),
+                            Kind = kind,
+                            Amount = p.Amount,
+                            Currency = string.IsNullOrWhiteSpace(p.Currency) ? "EUR" : p.Currency!,
+                            Notes = p.Notes,
+                            IsVoided = p.IsVoided
+                        });
+                        // do NOT add to keepPayIds (new row, no Id yet)
+                    }
                 }
 
-                await db.SaveChangesAsync();
+                // delete only original payments that are no longer present
+                foreach (var pay in originalPaysById.Values.Where(x => !keepPayIds.Contains(x.Id)))
+                    db.AllotmentPayments.Remove(pay);
 
-                return new SaveResult
-                {
-                    Success = true,
-                    Id = entity.Id,
-                    History = new List<HistoryDto>()
-                };
+                await db.SaveChangesAsync();
+                return new SaveResult { Success = true, Id = entity.Id };
             }
         }
+
     }
 }

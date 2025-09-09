@@ -1,8 +1,8 @@
 ﻿<UserControl x:Class="TravelAgency.Desktop.Views.AllotmentsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-            Background="White" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             Background="White"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <DockPanel>
-
         <!-- Toolbar -->
         <Grid DockPanel.Dock="Top"
               Margin="8,6,8,6">
@@ -18,14 +18,12 @@
                 <ColumnDefinition Width="12" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-
             <TextBlock Grid.Column="0"
                        Text="Search"
                        Style="{StaticResource FormLabel}" />
             <TextBox   Grid.Column="1"
                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                        Style="{StaticResource FormControl}" />
-
             <TextBlock Grid.Column="3"
                        Text="Hotel"
                        Style="{StaticResource FormLabel}" />
@@ -34,7 +32,6 @@
                        DisplayMemberPath="Name"
                        SelectedItem="{Binding FilterHotel}"
                        Style="{StaticResource FormControl}" />
-
             <TextBlock Grid.Column="6"
                        Text="Status"
                        Style="{StaticResource FormLabel}" />
@@ -42,13 +39,11 @@
                        ItemsSource="{Binding Statuses}"
                        SelectedItem="{Binding FilterStatus}"
                        Style="{StaticResource FormControl}" />
-
             <Button Grid.Column="9"
                     Content="Refresh"
                     Command="{Binding LoadCommand}"
                     Style="{StaticResource FormControl}" />
         </Grid>
-
         <!-- Master / Detail -->
         <Grid Margin="8">
             <Grid.ColumnDefinitions>
@@ -56,11 +51,11 @@
                 <ColumnDefinition Width="12" />
                 <ColumnDefinition Width="2*" />
             </Grid.ColumnDefinitions>
-
             <DataGrid Grid.Column="0"
                       ItemsSource="{Binding Allotments}"
                       SelectedItem="{Binding Selected}"
                       AutoGenerateColumns="False"
+                      MouseDoubleClick="AllotmentsGrid_MouseDoubleClick"
                       IsReadOnly="True">
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
@@ -76,7 +71,6 @@
                         </Style.Triggers>
                     </Style>
                 </DataGrid.RowStyle>
-
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Title"
                                         Binding="{Binding Title}"
@@ -101,10 +95,8 @@
                                         Width="120" />
                 </DataGrid.Columns>
             </DataGrid>
-
             <GridSplitter Grid.Column="1"
                           Width="12" />
-
             <!-- Detail editor -->
             <Border Grid.Column="2"
                     Padding="12"
@@ -127,40 +119,29 @@
                         <ColumnDefinition Width="120" />
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
-
                     <!-- Actions -->
                     <StackPanel Grid.Row="0"
                                 Grid.ColumnSpan="2"
                                 Orientation="Horizontal"
                                 Margin="0,0,0,8">
                         <Button Content="Add New"
-                                Command="{Binding BeginNewCommand}"
+                                Command="{Binding OpenNewDialogCommand}"
                                 Style="{StaticResource FormControl}" />
                         <Button Content="Edit"
-                                Command="{Binding BeginEditCommand}"
+                                Command="{Binding OpenEditDialogCommand}"
                                 IsEnabled="{Binding CanEdit}"
-                                Style="{StaticResource FormControl}" />
-                        <Button Content="Save"
-                                Command="{Binding SaveCommand}"
-                                IsEnabled="{Binding IsEditing}"
-                                Style="{StaticResource FormControl}" />
-                        <Button Content="Cancel"
-                                Command="{Binding CancelCommand}"
-                                IsEnabled="{Binding IsEditing}"
                                 Style="{StaticResource FormControl}" />
                         <Button Content="Delete"
                                 Command="{Binding DeleteCommand}"
                                 IsEnabled="{Binding CanDelete}"
                                 Style="{StaticResource FormControl}" />
                     </StackPanel>
-
                     <TextBlock Grid.Row="1"
                                Grid.ColumnSpan="2"
                                Text="{Binding EditorTitle}"
                                FontSize="16"
                                FontWeight="SemiBold"
                                Margin="0,0,0,12" />
-
                     <!-- Fields -->
                     <TextBlock Grid.Row="2"
                                Grid.Column="0"
@@ -172,7 +153,6 @@
                                Text="{Binding EditTitle}"
                                IsEnabled="{Binding IsEditing}"
                                Margin="0,0,0,8" />
-
                     <TextBlock Grid.Row="3"
                                Grid.Column="0"
                                Text="Hotel"
@@ -185,7 +165,6 @@
                                SelectedItem="{Binding EditHotel}"
                                IsEnabled="{Binding IsEditing}"
                                Margin="0,0,0,8" />
-
                     <TextBlock Grid.Row="4"
                                Grid.Column="0"
                                Text="Start / End"
@@ -201,7 +180,6 @@
                         <DatePicker SelectedDate="{Binding EditEndDate}"
                                     IsEnabled="{Binding IsEditing}" />
                     </StackPanel>
-
                     <TextBlock Grid.Row="5"
                                Grid.Column="0"
                                Text="Option Due"
@@ -212,7 +190,6 @@
                                 SelectedDate="{Binding EditOptionDue}"
                                 IsEnabled="{Binding IsEditing}"
                                 Margin="0,0,0,8" />
-
                     <TextBlock Grid.Row="6"
                                Grid.Column="0"
                                Text="Status"
@@ -224,7 +201,6 @@
                                SelectedItem="{Binding EditStatus}"
                                IsEnabled="{Binding IsEditing}"
                                Margin="0,0,0,8" />
-
                     <TextBlock Grid.Row="7"
                                Grid.Column="0"
                                Text="Notes"
@@ -238,14 +214,12 @@
                                TextWrapping="Wrap"
                                MinHeight="60"
                                Margin="0,0,0,8" />
-
                     <!-- Lines area -->
                     <StackPanel Grid.Row="8"
                                 Grid.ColumnSpan="2">
                         <TextBlock Text="Room Types / Lines"
                                    FontWeight="SemiBold"
                                    Margin="0,0,0,6" />
-
                         <DataGrid ItemsSource="{Binding Lines}"
                                   SelectedItem="{Binding SelectedLine}"
                                   AutoGenerateColumns="False"
@@ -277,7 +251,6 @@
                                                     Width="70" />
                             </DataGrid.Columns>
                         </DataGrid>
-
                         <!-- Line editor -->
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
@@ -293,7 +266,6 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="80" />
                             </Grid.ColumnDefinitions>
-
                             <TextBlock Grid.Column="0"
                                        Text="Room Type"
                                        Style="{StaticResource FormLabel}" />
@@ -302,21 +274,18 @@
                                        DisplayMemberPath="Name"
                                        SelectedItem="{Binding LineRoomType}"
                                        IsEnabled="{Binding IsEditing}" />
-
                             <TextBlock Grid.Column="3"
                                        Text="Total Qty"
                                        Style="{StaticResource FormLabel}" />
                             <TextBox   Grid.Column="4"
                                        Text="{Binding LineTotalQty}"
                                        IsEnabled="{Binding IsEditing}" />
-
                             <TextBlock Grid.Column="6"
                                        Text="Price/Night"
                                        Style="{StaticResource FormLabel}" />
                             <TextBox   Grid.Column="7"
                                        Text="{Binding LinePrice}"
                                        IsEnabled="{Binding IsEditing}" />
-
                             <TextBlock Grid.Column="9"
                                        Text="Currency"
                                        Style="{StaticResource FormLabel}" />
@@ -324,7 +293,6 @@
                                        Text="{Binding LineCurrency}"
                                        IsEnabled="{Binding IsEditing}" />
                         </Grid>
-
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,0,0,8">
                             <Button Content="Add / Update Line"
@@ -337,7 +305,6 @@
                                     Style="{StaticResource FormControl}"
                                     Margin="8,0,0,0" />
                         </StackPanel>
-
                         <!-- Cancel units -->
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -346,21 +313,18 @@
                                 <ColumnDefinition Width="12" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-
                             <TextBlock Grid.Column="0"
                                        Text="Cancel units"
                                        Style="{StaticResource FormLabel}" />
                             <TextBox   Grid.Column="1"
                                        Text="{Binding LineCancelQty}"
                                        IsEnabled="{Binding IsEditing}" />
-
                             <Button Grid.Column="3"
                                     Content="Cancel N"
                                     Command="{Binding CancelUnitsCommand}"
                                     IsEnabled="{Binding IsEditing}"
                                     Style="{StaticResource FormControl}" />
                         </Grid>
-
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,8,0,0">
                             <Button Content="Cancel Remaining"
@@ -368,7 +332,6 @@
                                     IsEnabled="{Binding IsEditing}"
                                     Style="{StaticResource FormControl}" />
                         </StackPanel>
-
                         <TextBlock Text="{Binding EditorHint}"
                                    Foreground="Gray"
                                    Margin="0,8,0,0" />

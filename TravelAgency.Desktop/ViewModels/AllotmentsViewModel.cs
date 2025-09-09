@@ -3,10 +3,12 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
 using TravelAgency.Data;
+using TravelAgency.Desktop.Views;
 using TravelAgency.Domain.Entities;
 using TravelAgency.Domain.Enums;
 using TravelAgency.Services;
@@ -15,6 +17,7 @@ namespace TravelAgency.Desktop.ViewModels
 {
     public partial class AllotmentsViewModel : ObservableObject
     {
+       
         private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
         private readonly LookupCacheService _cache;
 
@@ -55,6 +58,26 @@ namespace TravelAgency.Desktop.ViewModels
         [ObservableProperty] private string? lineTotalQty = "0";
         [ObservableProperty] private string? linePrice = "0";
         [ObservableProperty] private string? lineCurrency = "EUR";
+
+
+        [RelayCommand]
+        private async Task OpenNewDialogAsync()
+        {
+            var owner = Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+            var win = new AllotmentEditorWindow(allotmentId: null) { Owner = owner };
+            var ok = win.ShowDialog() ?? false;
+            if (ok) await LoadAsync();
+        }
+
+        [RelayCommand]
+        private async Task OpenEditDialogAsync()
+        {
+            if (Selected == null) return;
+            var owner = Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+            var win = new AllotmentEditorWindow(Selected.Id) { Owner = owner };
+            var ok = win.ShowDialog() ?? false;
+            if (ok) await LoadAsync();
+        }
 
         // Cancel units input
         [ObservableProperty] private string? lineCancelQty;
