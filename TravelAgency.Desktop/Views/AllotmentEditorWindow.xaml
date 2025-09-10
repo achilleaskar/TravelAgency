@@ -273,7 +273,8 @@
                                             Binding="{Binding ChangedBy}" />
                         <DataGridTextColumn Header="Entity"
                                             Width="140"
-                                            Binding="{Binding EntityType}" />
+                                            Binding="{Binding EntityName}" />
+                        <!-- was EntityType -->
                         <DataGridTextColumn Header="Property"
                                             Width="140"
                                             Binding="{Binding PropertyName}" />

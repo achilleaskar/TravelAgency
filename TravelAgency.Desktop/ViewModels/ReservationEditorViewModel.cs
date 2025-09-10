@@ -1,395 +1,298 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Globalization;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Data;
-using TravelAgency.Data;
+using System.Runtime.CompilerServices;
+using System.Windows.Input;
+using TravelAgency.Desktop.ViewModels;
+using TravelAgency.Domain.Dtos;
 using TravelAgency.Domain.Entities;
-using TravelAgency.Domain.Enums;
-using TravelAgency.Domain.Models;
 using TravelAgency.Services;
 
-namespace TravelAgency.Desktop.ViewModels
+public class ReservationEditorViewModel : INotifyPropertyChanged, INotifyDataErrorInfo
 {
-    public partial class ReservationEditorViewModel : ObservableObject
+    private readonly IReservationService _svc;
+    private readonly LookupCacheService _cache;
+
+    public ReservationEditorViewModel(IReservationService svc, LookupCacheService cache)
     {
-        private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
-        private readonly LookupCacheService _cache;
-        private readonly int _customerId;
-        private readonly int? _reservationId;
-        // Filtered views
-        private readonly ListCollectionView _roomsView;
-        private readonly ListCollectionView _servicesView;
+        _svc = svc; _cache = cache;
 
-        public ICollectionView RoomsView => _roomsView;
-        public ICollectionView ServicesView => _servicesView;
-        [ObservableProperty] private ReservationBasketLine? selectedBasketLine;
+        AddLineCommand = new RelayCommand(_ => AddLine());
+        RemoveSelectedLineCommand = new RelayCommand(_ => RemoveSelectedLine(), _ => SelectedLine != null);
+        AddPaymentCommand = new RelayCommand(_ => AddPayment());
+        RemoveSelectedPaymentCommand = new RelayCommand(_ => RemoveSelectedPayment(), _ => SelectedPayment != null);
+        SaveCommand = new RelayCommand(async _ => await SaveAsync(), _ => CanSave);
+        CancelCommand = new RelayCommand(_ => CloseRequested?.Invoke(false));
 
-        public ObservableCollection<City> Cities => _cache.Cities;
+        Customers = new ObservableCollection<CustomerVM>();
+        Cities = new ObservableCollection<CityVM>();
+        Hotels = new ObservableCollection<HotelVM>();
+        FilteredHotels = new ObservableCollection<HotelVM>();
+        RoomTypes = new ObservableCollection<RoomTypeVM>();
+        Lines = new ObservableCollection<ReservationLineVM>();
+        Payments = new ObservableCollection<PaymentVM>();
+        History = new ObservableCollection<UpdateLogVM>();
 
-        [ObservableProperty] private string? title;
-        [ObservableProperty] private DateTime? from = DateTime.Today;
-        [ObservableProperty] private DateTime? to = DateTime.Today.AddDays(3);
-
-        [ObservableProperty] private DateTime? depositDueDate;
-        [ObservableProperty] private DateTime? balanceDueDate;
-
-        // Availability (grouped by allotment)
-        public ObservableCollection<AvailableAllotmentDto> Available { get; } = new();
-        [ObservableProperty] private AvailableAllotmentDto? selectedAvailable;
-
-        // Per-allotment candidates (room types)
-        public ObservableCollection<AddLineCandidate> AddLineCandidates { get; } = new();
-        [ObservableProperty] private AddLineCandidate? selectedAddLine;
-        [ObservableProperty] private string? addQty = "1";
-
-        // Basket (rooms + services)
-        public ObservableCollection<ReservationBasketLine> Basket { get; } = new();
-
-        [ObservableProperty] private City? selectedCity;
-
-        // Service subform
-        [ObservableProperty] private string? serviceName;
-        [ObservableProperty] private string? serviceQty = "1";
-        [ObservableProperty] private string? servicePrice = "0";
-
-        public decimal GrandTotal => Basket.Sum(b => b.LineTotal);
-
-        public ReservationEditorViewModel(
-            IDbContextFactory<TravelAgencyDbContext> dbf,
-            LookupCacheService cache,
-            int customerId,
-            int? reservationId = null)
-        {
-            _dbf = dbf;
-            _cache = cache;
-            _customerId = customerId;
-            _reservationId = reservationId;
-
-            // two independent views over the same ObservableCollection
-            _roomsView = new ListCollectionView(Basket);
-            _servicesView = new ListCollectionView(Basket);
-
-            _roomsView.Filter = o => o is ReservationBasketLine l && l.Kind == "AllotmentRoom";
-            _servicesView.Filter = o => o is ReservationBasketLine l && l.Kind == "Service";
-
-            // keep views & total fresh
-            Basket.CollectionChanged += (_, __) =>
-            {
-                _roomsView.Refresh();
-                _servicesView.Refresh();
-                OnPropertyChanged(nameof(GrandTotal));
-            };
-
-        }
-
-        // -------- lifecycle --------
-
-        public async Task InitializeAsync()
-        {
-            if (_reservationId.HasValue)
-                await LoadExistingAsync(_reservationId.Value);
-
-            await LoadAvailabilityAsync();
-            await LoadCandidatesAsync();
-            OnPropertyChanged(nameof(GrandTotal));
-        }
-
-        private async Task LoadExistingAsync(int id)
-        {
-            await using var db = await _dbf.CreateDbContextAsync();
-
-            var r = await db.Reservations
-                .Include(x => x.Items)
-                .FirstAsync(x => x.Id == id);
-
-            Title = r.Title;
-            From = r.StartDate;
-            To = r.EndDate;
-            DepositDueDate = r.DepositDueDate;
-            BalanceDueDate = r.BalanceDueDate;
-
-            Basket.Clear();
-            foreach (var it in r.Items)
-            {
-                if (it.Kind == ReservationItemKind.AllotmentRoom)
-                {
-                    Basket.Add(new ReservationBasketLine
-                    {
-                        Kind = "AllotmentRoom",
-                        AllotmentRoomTypeId = it.AllotmentRoomTypeId,
-                        Title = "(existing room line)",
-                        Qty = it.Qty,
-                        UnitPrice = it.UnitPrice,
-                    });
-                }
-                else
-                {
-                    Basket.Add(new ReservationBasketLine
-                    {
-                        Kind = "Service",
-                        Title = it.ServiceName ?? "",
-                        Qty = it.Qty,
-                        UnitPrice = it.UnitPrice,
-                    });
-                }
-            }
-        }
-
-        // Auto-refresh on filter changes
-        partial void OnSelectedCityChanged(City? value) => _ = LoadAvailabilityAsync();
-        partial void OnFromChanged(DateTime? value) => _ = LoadAvailabilityAsync();
-        partial void OnToChanged(DateTime? value) => _ = LoadAvailabilityAsync();
-        partial void OnSelectedAvailableChanged(AvailableAllotmentDto? value) => _ = LoadCandidatesAsync();
-
-        // -------- availability & candidates --------
-
-        [RelayCommand]
-        private async Task LoadAvailabilityAsync()
-        {
-            Available.Clear();
-
-            await using var db = await _dbf.CreateDbContextAsync();
-
-            var lines = db.AllotmentRoomTypes
-                .Include(l => l.RoomType)
-                .Include(l => l.Allotment)!.ThenInclude(a => a.Hotel)!.ThenInclude(h => h.City)
-                .AsQueryable();
-
-            if (From.HasValue && To.HasValue)
-                lines = lines.Where(l => l.Allotment!.EndDate >= From!.Value &&
-                                         l.Allotment!.StartDate <= To!.Value);
-            if (SelectedCity != null)
-                lines = lines.Where(l => l.Allotment!.Hotel!.CityId == SelectedCity.Id);
-
-            var lineWithSold =
-                from l in lines
-                join ri in db.ReservationItems.Include(x => x.Reservation)
-                    on l.Id equals ri.AllotmentRoomTypeId into g
-                select new
-                {
-                    Line = l,
-                    Sold = g.Where(x => x.Reservation.Status != ReservationStatus.Cancelled)
-                            .Sum(x => (int?)x.Qty) ?? 0
-                };
-
-            var availableLines = await lineWithSold
-    .Where(x => (x.Line.Quantity - x.Sold) > 0)
-    .AsNoTracking()
-    .ToListAsync();
-
-            // Group strictly by AllotmentId to enforce uniqueness
-            var grouped = availableLines
-                .GroupBy(x => x.Line.AllotmentId)
-                .Select(g =>
-                {
-                    var any = g.First().Line; // safe: group has at least one
-                    return new AvailableAllotmentDto
-                    {
-                        AllotmentId = any.AllotmentId,
-                        Title = any.Allotment!.Title,
-                        HotelName = any.Allotment!.Hotel!.Name,
-                        StartDate = any.Allotment!.StartDate,
-                        EndDate = any.Allotment!.EndDate,
-                        RemainingTotal = g.Sum(x => x.Line.Quantity - x.Sold)
-                    };
-                })
-                .OrderBy(x => x.StartDate)
-                .ToList();
-
-            Available.Clear();
-            foreach (var it in grouped) Available.Add(it);
-
-            // refresh candidates list if a row is still selected
-            await LoadCandidatesAsync();
-        }
-
-        [RelayCommand]
-        private async Task LoadCandidatesAsync()
-        {
-            AddLineCandidates.Clear();
-            if (SelectedAvailable == null) return;
-
-            await using var db = await _dbf.CreateDbContextAsync();
-
-            var lines = await db.AllotmentRoomTypes
-                .Include(l => l.RoomType)
-                .Where(l => l.AllotmentId == SelectedAvailable.AllotmentId)
-                .AsNoTracking()
-                .ToListAsync();
-
-            var lineIds = lines.Select(l => l.Id).ToList();
-
-            var soldByLine = await db.ReservationItems
-                .Include(ri => ri.Reservation)
-                .Where(ri => ri.AllotmentRoomTypeId != null &&
-                             lineIds.Contains(ri.AllotmentRoomTypeId.Value) &&
-                             ri.Reservation.Status != ReservationStatus.Cancelled)
-                .GroupBy(ri => ri.AllotmentRoomTypeId!.Value)
-                .Select(g => new { LineId = g.Key, Qty = g.Sum(x => x.Qty) })
-                .ToDictionaryAsync(x => x.LineId, x => x.Qty);
-
-            foreach (var l in lines)
-            {
-                var sold = soldByLine.TryGetValue(l.Id, out var s) ? s : 0;
-                var remaining = Math.Max(0, l.Quantity - sold);
-                if (remaining <= 0) continue;
-
-                AddLineCandidates.Add(new AddLineCandidate
-                {
-                    AllotmentRoomTypeId = l.Id,
-                    Display = $"{l.RoomType!.Name} · Rem {remaining} @ {l.PricePerNight:0.##} €",
-                    Remaining = remaining,
-                    UnitPrice = l.PricePerNight,
-                });
-            }
-        }
-
-        // -------- basket actions --------
-
-        [RelayCommand]
-        private void AddAllotmentLine()
-        {
-            if (SelectedAddLine == null) return;
-            if (!int.TryParse(AddQty ?? "1", out var qty) || qty <= 0) qty = 1;
-            if (qty > SelectedAddLine.Remaining) qty = SelectedAddLine.Remaining;
-
-            Basket.Add(new ReservationBasketLine
-            {
-                Kind = "AllotmentRoom",
-                AllotmentRoomTypeId = SelectedAddLine.AllotmentRoomTypeId,
-                Title = SelectedAddLine.Display,
-                Qty = qty,
-                UnitPrice = SelectedAddLine.UnitPrice,
-            });
-
-            SelectedAddLine = null;
-            AddQty = "1";
-            OnPropertyChanged(nameof(GrandTotal));
-        }
-
-        [RelayCommand]
-        private void AddServiceLine()
-        {
-            if (string.IsNullOrWhiteSpace(ServiceName)) return;
-            if (!int.TryParse(ServiceQty ?? "1", out var qty)) qty = 1;
-            if (!decimal.TryParse(ServicePrice ?? "0", NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
-                price = 0m;
-
-            Basket.Add(new ReservationBasketLine
-            {
-                Kind = "Service",
-                Title = ServiceName!.Trim(),
-                Qty = qty,
-                UnitPrice = price,
-            });
-
-            ServiceName = "";
-            ServiceQty = "1";
-            ServicePrice = "0";
-            OnPropertyChanged(nameof(GrandTotal));
-        }
-
-        [RelayCommand]
-        private void RemoveBasketLine(ReservationBasketLine? line)
-        {
-            if (line == null) return;
-            Basket.Remove(line);
-            OnPropertyChanged(nameof(GrandTotal));
-        }
-
-        // -------- save / cancel --------
-
-        [RelayCommand]
-        private async Task SaveAsync()
-        {
-            if (string.IsNullOrWhiteSpace(Title) || !From.HasValue || !To.HasValue) return;
-
-            await using var db = await _dbf.CreateDbContextAsync();
-
-            Reservation r;
-            if (_reservationId.HasValue)
-            {
-                r = await db.Reservations.Include(x => x.Items).FirstAsync(x => x.Id == _reservationId.Value);
-
-                r.Title = Title!.Trim();
-                r.StartDate = From.Value.Date;
-                r.EndDate = To.Value.Date;
-                r.DepositDueDate = DepositDueDate;
-                r.BalanceDueDate = BalanceDueDate;
-
-                // Replace items (simple MVP flow)
-                db.ReservationItems.RemoveRange(r.Items);
-            }
-            else
-            {
-                r = new Reservation
-                {
-                    CustomerId = _customerId,
-                    Title = Title!.Trim(),
-                    StartDate = From.Value.Date,
-                    EndDate = To.Value.Date,
-                    DepositDueDate = DepositDueDate,
-                    BalanceDueDate = BalanceDueDate,
-                    Status = ReservationStatus.Draft
-                };
-                db.Reservations.Add(r);
-                await db.SaveChangesAsync();
-            }
-
-            foreach (var line in Basket)
-            {
-                if (line.Kind == "AllotmentRoom")
-                {
-                    db.ReservationItems.Add(new ReservationItem
-                    {
-                        ReservationId = r.Id,
-                        Kind = ReservationItemKind.AllotmentRoom,
-                        AllotmentRoomTypeId = line.AllotmentRoomTypeId,
-                        Qty = line.Qty,
-                        UnitPrice = line.UnitPrice,
-                        StartDate = r.StartDate,
-                        EndDate = r.EndDate
-                    });
-                }
-                else
-                {
-                    db.ReservationItems.Add(new ReservationItem
-                    {
-                        ReservationId = r.Id,
-                        Kind = ReservationItemKind.Service,
-                        ServiceName = line.Title,
-                        Qty = line.Qty,
-                        UnitPrice = line.UnitPrice,
-                    });
-                }
-            }
-
-            await db.SaveChangesAsync();
-            CloseWindow();
-        }
-
-        [RelayCommand]
-        private void Cancel() => CloseWindow();
-
-        private void CloseWindow()
-        {
-            foreach (System.Windows.Window w in System.Windows.Application.Current.Windows)
-                if (w.DataContext == this) { w.Close(); break; }
-        }
-
-        // -------- helper row for candidate ComboBox --------
-        public class AddLineCandidate
-        {
-            public int AllotmentRoomTypeId { get; set; }
-            public string Display { get; set; } = "";
-            public int Remaining { get; set; }
-            public decimal UnitPrice { get; set; }
-        }
+        Lines.CollectionChanged += (_, __) => { RecalcTotals(); MarkDirty(); RaiseCanExec(); OnPropertyChanged(nameof(CanSave)); };
+        Payments.CollectionChanged += (_, __) => { RecalcTotals(); MarkDirty(); RaiseCanExec(); };
     }
+
+    public event Action<bool>? CloseRequested;
+
+    public ObservableCollection<CustomerVM> Customers { get; }
+    public ObservableCollection<CityVM> Cities { get; }
+    public ObservableCollection<HotelVM> Hotels { get; }
+    public ObservableCollection<HotelVM> FilteredHotels { get; }
+    public ObservableCollection<RoomTypeVM> RoomTypes { get; }
+    public ObservableCollection<ReservationLineVM> Lines { get; }
+    public ObservableCollection<PaymentVM> Payments { get; }
+    public ObservableCollection<UpdateLogVM> History { get; }
+
+    public string HeaderTitle => _isNew ? "New Reservation" : $"Edit Reservation #{_id}";
+    private bool _isNew; private int? _id; private bool _dirty;
+
+    public int CustomerId { get => _customerId; set { if (Set(ref _customerId, value)) { MarkDirty(); OnPropertyChanged(nameof(CanSave)); } } }
+    private int _customerId;
+
+    public CityVM? SelectedCity { get => _city; set { if (Set(ref _city, value)) { ApplyHotelFilter(); MarkDirty(); OnPropertyChanged(nameof(CanSave)); } } }
+    private CityVM? _city;
+
+    public HotelVM? SelectedHotel { get => _hotel; set { if (Set(ref _hotel, value)) { MarkDirty(); OnPropertyChanged(nameof(CanSave)); } } }
+    private HotelVM? _hotel;
+
+    public DateTime? CheckIn { get => _in; set { if (Set(ref _in, value)) { ValidateDates(); RecalcTotals(); MarkDirty(); } } }
+    private DateTime? _in = DateTime.Today;
+
+    public DateTime? CheckOut { get => _out; set { if (Set(ref _out, value)) { ValidateDates(); RecalcTotals(); MarkDirty(); } } }
+    private DateTime? _out = DateTime.Today.AddDays(1);
+
+    public int Nights { get => _nights; private set => Set(ref _nights, value); }
+    private int _nights;
+    public decimal Total { get => _total; private set => Set(ref _total, value); }
+    private decimal _total;
+    public decimal PaidTotal { get => _paid; private set => Set(ref _paid, value); }
+    private decimal _paid;
+    public decimal Balance { get => _balance; private set => Set(ref _balance, value); }
+    private decimal _balance;
+
+    public ReservationLineVM? SelectedLine { get => _selLine; set { if (Set(ref _selLine, value)) RaiseCanExec(); } }
+    private ReservationLineVM? _selLine;
+    public PaymentVM? SelectedPayment { get => _selPay; set { if (Set(ref _selPay, value)) RaiseCanExec(); } }
+    private PaymentVM? _selPay;
+
+    public bool CanSave => _dirty && !HasErrors && SelectedHotel != null && SelectedCity != null && Lines.Any() && CustomerId > 0;
+
+    public ICommand AddLineCommand { get; }
+    public ICommand RemoveSelectedLineCommand { get; }
+    public ICommand AddPaymentCommand { get; }
+    public ICommand RemoveSelectedPaymentCommand { get; }
+    public ICommand SaveCommand { get; }
+    public ICommand CancelCommand { get; }
+
+    public async Task InitializeAsNewAsync()
+    {
+        _isNew = true; _id = null;
+        await LoadLookupsAsync();
+        SelectedCity = Cities.FirstOrDefault();
+        ApplyHotelFilter();
+        SelectedHotel = null;
+        Lines.Clear(); Payments.Clear(); History.Clear();
+        _dirty = false; RaiseAll();
+    }
+
+    public async Task InitializeForEditAsync(int id)
+    {
+        _isNew = false; _id = id;
+        await LoadLookupsAsync();
+
+        var dto = await _svc.LoadAsync(id);
+        CustomerId = dto.CustomerId;
+        SelectedCity = Cities.FirstOrDefault(c => c.Id == Hotels.First(h => h.Id == dto.HotelId).CityId);
+        ApplyHotelFilter();
+        SelectedHotel = FilteredHotels.FirstOrDefault(h => h.Id == dto.HotelId);
+        CheckIn = dto.CheckInUtc.ToLocalTime().Date;
+        CheckOut = dto.CheckOutUtc.ToLocalTime().Date;
+
+        Lines.Clear();
+        foreach (var l in dto.Lines)
+        {
+            var vm = new ReservationLineVM
+            {
+                Id = l.Id,
+                RoomType = RoomTypes.FirstOrDefault(r => r.Id == l.RoomTypeId),
+                Quantity = l.Quantity,
+                PricePerNight = l.PricePerNight,
+                Notes = l.Notes
+            };
+            HookLine(vm);
+            Lines.Add(vm);
+        }
+
+        Payments.Clear();
+        foreach (var p in dto.Payments.OrderBy(p => p.DateUtc))
+        {
+            var vm = new PaymentVM
+            {
+                Id = p.Id,
+                Date = p.DateUtc.ToLocalTime().Date,
+                Title = p.Title,
+                Kind = p.Kind,
+                Amount = p.Amount,
+                Notes = p.Notes,
+                IsVoided = p.IsVoided,
+                UpdatedAtLocal = p.UpdatedAtUtc?.ToLocalTime()
+            };
+            HookPayment(vm);
+            Payments.Add(vm);
+        }
+
+        History.Clear();
+        foreach (var h in dto.History.OrderByDescending(x => x.ChangedAtUtc))
+        {
+            History.Add(new UpdateLogVM
+            {
+                ChangedAtUtc = h.ChangedAtUtc,
+                ChangedBy = h.ChangedBy,
+                EntityName = h.EntityName,
+                PropertyName = h.PropertyName,
+                OldValue = h.OldValue,
+                NewValue = h.NewValue
+            });
+        }
+
+        _dirty = false; RecalcTotals(); RaiseAll();
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        Customers.Clear(); Cities.Clear(); Hotels.Clear(); RoomTypes.Clear();
+        var (customers, cities, hotels, roomTypes) = await _svc.LoadLookupsAsync();
+        foreach (var x in customers) Customers.Add(x);
+        foreach (var x in cities) Cities.Add(x);
+        foreach (var x in hotels) Hotels.Add(x);
+        foreach (var x in roomTypes) RoomTypes.Add(x);
+    }
+
+    private void AddLine()
+    {
+        var vm = new ReservationLineVM { RoomType = RoomTypes.FirstOrDefault(), Quantity = 1, PricePerNight = 0m };
+        HookLine(vm); Lines.Add(vm);
+    }
+    private void HookLine(ReservationLineVM vm)
+    {
+        vm.ResolveRoomTypeFromId = id =>
+        {
+            var rt = RoomTypes.FirstOrDefault(r => r.Id == id);
+            if (!ReferenceEquals(vm.RoomType, rt)) vm.RoomType = rt;
+        };
+        vm.PropertyChanged += (_, __) => { RecalcTotals(); MarkDirty(); RaiseCanExec(); };
+    }
+    private void RemoveSelectedLine() { if (SelectedLine == null) return; Lines.Remove(SelectedLine); RecalcTotals(); MarkDirty(); RaiseCanExec(); }
+
+    private void AddPayment()
+    {
+        var vm = new PaymentVM { Date = DateTime.Today, Title = "Payment", Kind = "Deposit", Amount = 0m, IsVoided = false };
+        HookPayment(vm); Payments.Add(vm);
+    }
+    private void HookPayment(PaymentVM vm)
+    {
+        vm.PropertyChanged += (_, __) => { RecalcTotals(); MarkDirty(); RaiseCanExec(); };
+    }
+    private void RemoveSelectedPayment() { if (SelectedPayment == null) return; Payments.Remove(SelectedPayment); RecalcTotals(); MarkDirty(); RaiseCanExec(); }
+
+    private void RecalcTotals()
+    {
+        var n = 0;
+        if (CheckIn.HasValue && CheckOut.HasValue) n = Math.Max(0, (CheckOut.Value.Date - CheckIn.Value.Date).Days);
+        Nights = n;
+
+        decimal total = 0m;
+        foreach (var l in Lines) total += l.PricePerNight * l.Quantity * n;
+        Total = total;
+
+        decimal paid = 0m;
+        foreach (var p in Payments) if (!p.IsVoided) paid += p.Amount;
+        PaidTotal = paid;
+
+        Balance = Total - PaidTotal;
+
+        foreach (var l in Lines) l.SetNightsForLineTotal(n);
+    }
+
+    private void ApplyHotelFilter()
+    {
+        FilteredHotels.Clear();
+        if (SelectedCity == null) return;
+        foreach (var h in Hotels.Where(h => h.CityId == SelectedCity.Id)) FilteredHotels.Add(h);
+        if (SelectedHotel != null && !FilteredHotels.Contains(SelectedHotel)) SelectedHotel = null;
+    }
+
+    private void MarkDirty() { _dirty = true; RaiseCanExec(); OnPropertyChanged(nameof(CanSave)); }
+    private void RaiseCanExec()
+    {
+        (SaveCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (RemoveSelectedLineCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (RemoveSelectedPaymentCommand as RelayCommand)?.RaiseCanExecuteChanged();
+    }
+    private void RaiseAll() { OnPropertyChanged(string.Empty); RaiseCanExec(); }
+
+    // validation like in Allotments, omitted for brevity (require customer, hotel, dates, lines)
+
+    // Save
+    private async Task SaveAsync()
+    {
+        // (do validation like your Allotment VM)
+        if (!CanSave) return;
+
+        var dto = new ReservationDto
+        {
+            Id = _id,
+            CustomerId = CustomerId,
+            HotelId = SelectedHotel!.Id,
+            CheckInUtc = (CheckIn ?? DateTime.Today).ToUniversalTime(),
+            CheckOutUtc = (CheckOut ?? DateTime.Today).ToUniversalTime(),
+            Lines = Lines.Select(l => new ReservationLineDto
+            {
+                Id = l.Id,
+                RoomTypeId = l.RoomTypeId,
+                Quantity = l.Quantity,
+                PricePerNight = l.PricePerNight,
+                Notes = l.Notes
+            }).ToList(),
+            Payments = Payments.Select(p => new PaymentDto
+            {
+                Id = p.Id,
+                DateUtc = p.Date.ToUniversalTime(),
+                Title = p.Title,
+                Kind = p.Kind,
+                Amount = p.Amount,
+                Notes = p.Notes,
+                IsVoided = p.IsVoided
+            }).ToList()
+        };
+
+        var result = await _svc.SaveAsync(dto);
+        if (!result.Success) return;
+
+        _id = result.Id; _isNew = false; _dirty = false;
+        OnPropertyChanged(nameof(HeaderTitle));
+        RaiseCanExec();
+        CloseRequested?.Invoke(true);
+    }
+
+    #region INotifyPropertyChanged
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected bool Set<T>(ref T field, T value, [CallerMemberName] string? name = null)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value)) return false;
+        field = value;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        return true;
+    }
+
+    protected void OnPropertyChanged([CallerMemberName] string? name = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    #endregion
 }

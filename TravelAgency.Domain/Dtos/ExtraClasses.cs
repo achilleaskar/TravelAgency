@@ -10,6 +10,7 @@ namespace TravelAgency.Domain.Dtos
     public class CityVM { public int Id { get; set; } public string Name { get; set; } = ""; }
     public class HotelVM { public int Id { get; set; } public string Name { get; set; } = ""; public int CityId { get; set; } }
     public class RoomTypeVM { public int Id { get; set; } public string Name { get; set; } = ""; }
+    public class CustomerVM { public int Id { get; set; } public string Name { get; set; } = ""; }
 
     public class AllotmentDto
     {
