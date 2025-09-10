@@ -16,5 +16,4 @@ public class AllotmentRoomType : AuditableEntity
     public int Quantity { get; set; }
 
     public decimal PricePerNight { get; set; }
-    public string Currency { get; set; } = "EUR";
 }

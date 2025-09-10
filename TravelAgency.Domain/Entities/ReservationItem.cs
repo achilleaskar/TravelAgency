@@ -30,7 +30,6 @@ public class ReservationItem
     public decimal UnitPrice { get; set; }
 
     [MaxLength(3)]
-    public string Currency { get; set; } = "EUR";
 
     public DateTime? DepositDueDate { get; set; }
     public DateTime? BalanceDueDate { get; set; }

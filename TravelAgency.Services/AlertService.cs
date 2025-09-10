@@ -54,7 +54,6 @@ public class AlertService
                         AllotmentRoomTypeId = allotmentRoomTypeId,
                         Qty = qty,
                         UnitPrice = art.PricePerNight,
-                        Currency = art.Currency,
                         StartDate = art.Allotment!.StartDate,
                         EndDate = art.Allotment!.EndDate
                     });

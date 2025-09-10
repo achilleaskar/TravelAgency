@@ -6,7 +6,6 @@ public class ReservationBasketLine
     public string Title { get; set; } = "";
     public int Qty { get; set; }
     public decimal UnitPrice { get; set; }
-    public string Currency { get; set; } = "EUR";
 
     // For allotment room lines
     public int? AllotmentRoomTypeId { get; set; }

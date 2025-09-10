@@ -158,10 +158,7 @@
                                     <DataGridTextColumn Header="Price"
                                                         Binding="{Binding UnitPrice, StringFormat={}{0:0.##}}"
                                                         Width="90" />
-                                    <DataGridTextColumn Header="Curr"
-                                                        Binding="{Binding Currency}"
-                                                        Width="70" />
-                                    <DataGridTextColumn Header="Line"
+                                        <DataGridTextColumn Header="Line"
                                                         Binding="{Binding LineTotal, StringFormat={}{0:0.##}}"
                                                         Width="90" />
                                     <DataGridTemplateColumn Width="60">
@@ -235,10 +232,7 @@
                             <DataGridTextColumn Header="Price"
                                                 Binding="{Binding UnitPrice, StringFormat={}{0:0.##}}"
                                                 Width="90" />
-                            <DataGridTextColumn Header="Curr"
-                                                Binding="{Binding Currency}"
-                                                Width="70" />
-                            <DataGridTextColumn Header="Line"
+                              <DataGridTextColumn Header="Line"
                                                 Binding="{Binding LineTotal, StringFormat={}{0:0.##}}"
                                                 Width="90" />
                             <DataGridTemplateColumn Width="60">
@@ -313,10 +307,7 @@
                             <DataGridTextColumn Header="Price"
                                                 Binding="{Binding UnitPrice}"
                                                 Width="90" />
-                            <DataGridTextColumn Header="Curr"
-                                                Binding="{Binding Currency}"
-                                                Width="70" />
-                            <DataGridTextColumn Header="Line Total"
+                                <DataGridTextColumn Header="Line Total"
                                                 Binding="{Binding LineTotal, StringFormat=0.##}"
                                                 Width="110" />
                         </DataGrid.Columns>

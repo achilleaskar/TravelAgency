@@ -126,7 +126,6 @@ namespace TravelAgency.Desktop.ViewModels
                         Title = "(existing room line)",
                         Qty = it.Qty,
                         UnitPrice = it.UnitPrice,
-                        Currency = it.Currency
                     });
                 }
                 else
@@ -137,7 +136,6 @@ namespace TravelAgency.Desktop.ViewModels
                         Title = it.ServiceName ?? "",
                         Qty = it.Qty,
                         UnitPrice = it.UnitPrice,
-                        Currency = it.Currency
                     });
                 }
             }
@@ -245,10 +243,9 @@ namespace TravelAgency.Desktop.ViewModels
                 AddLineCandidates.Add(new AddLineCandidate
                 {
                     AllotmentRoomTypeId = l.Id,
-                    Display = $"{l.RoomType!.Name} · Rem {remaining} @ {l.PricePerNight:0.##} {l.Currency}",
+                    Display = $"{l.RoomType!.Name} · Rem {remaining} @ {l.PricePerNight:0.##} €",
                     Remaining = remaining,
                     UnitPrice = l.PricePerNight,
-                    Currency = l.Currency
                 });
             }
         }
@@ -269,7 +266,6 @@ namespace TravelAgency.Desktop.ViewModels
                 Title = SelectedAddLine.Display,
                 Qty = qty,
                 UnitPrice = SelectedAddLine.UnitPrice,
-                Currency = SelectedAddLine.Currency
             });
 
             SelectedAddLine = null;
@@ -291,7 +287,6 @@ namespace TravelAgency.Desktop.ViewModels
                 Title = ServiceName!.Trim(),
                 Qty = qty,
                 UnitPrice = price,
-                Currency = "EUR"
             });
 
             ServiceName = "";
@@ -358,7 +353,6 @@ namespace TravelAgency.Desktop.ViewModels
                         AllotmentRoomTypeId = line.AllotmentRoomTypeId,
                         Qty = line.Qty,
                         UnitPrice = line.UnitPrice,
-                        Currency = line.Currency,
                         StartDate = r.StartDate,
                         EndDate = r.EndDate
                     });
@@ -372,7 +366,6 @@ namespace TravelAgency.Desktop.ViewModels
                         ServiceName = line.Title,
                         Qty = line.Qty,
                         UnitPrice = line.UnitPrice,
-                        Currency = line.Currency
                     });
                 }
             }
@@ -397,7 +390,6 @@ namespace TravelAgency.Desktop.ViewModels
             public string Display { get; set; } = "";
             public int Remaining { get; set; }
             public decimal UnitPrice { get; set; }
-            public string Currency { get; set; } = "EUR";
         }
     }
 }

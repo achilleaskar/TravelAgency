@@ -14,8 +14,7 @@ public class AllotmentPayment : AuditableEntity
     public DateTime Date { get; set; } = DateTime.UtcNow;
 
     public decimal Amount { get; set; }
-    public string Currency { get; set; } = "EUR";
-
+    public DateTime UpdatedAtUtc { get; set; }   // <-- NEW (non-nullable)
     public PaymentKind Kind { get; set; } = PaymentKind.Other;
     public string Title { get; set; } = "Payment";
     public string? Notes { get; set; }

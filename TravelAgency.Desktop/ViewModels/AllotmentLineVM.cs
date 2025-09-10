@@ -14,7 +14,6 @@ namespace TravelAgency.Desktop.ViewModels
         private int _roomTypeId; // <-- bind to this from XAML
         private int _quantity;
         private decimal _pricePerNight;
-        private string _currency = "EUR";
         private string? _notes;
         private int _nights;
         private decimal _lineTotal;
@@ -51,7 +50,6 @@ namespace TravelAgency.Desktop.ViewModels
 
         public int Quantity { get => _quantity; set { if (Set(ref _quantity, value)) Recalc(); } }
         public decimal PricePerNight { get => _pricePerNight; set { if (Set(ref _pricePerNight, value)) Recalc(); } }
-        public string Currency { get => _currency; set { if (Set(ref _currency, value)) Recalc(); } }
         public string? Notes { get => _notes; set => Set(ref _notes, value); }
 
         public decimal LineTotal { get => _lineTotal; private set => Set(ref _lineTotal, value); }

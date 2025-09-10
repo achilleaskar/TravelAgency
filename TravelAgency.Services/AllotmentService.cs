@@ -69,21 +69,21 @@ namespace TravelAgency.Services
                     RoomTypeId = l.RoomTypeId,
                     Quantity = l.Quantity,
                     PricePerNight = l.PricePerNight,
-                    Currency = l.Currency,
                     Notes = l.Notes
                 }).ToList(),
                 Payments = a.Payments
-                    .OrderBy(p => p.Date)
-                    .Select(p => new PaymentDto
-                    {
-                        DateUtc = p.Date.ToUniversalTime(),
-                        Title = p.Title,
-                        Kind = p.Kind.ToString(),
-                        Amount = p.Amount,
-                        Currency = p.Currency,
-                        Notes = p.Notes,
-                        IsVoided = p.IsVoided
-                    }).ToList(),
+                        .OrderBy(p => p.Date)
+                        .Select(p => new PaymentDto
+                        {
+                            Id = p.Id,                                 // if you use Ids
+                            DateUtc = p.Date.ToUniversalTime(),
+                            Title = p.Title,
+                            Kind = p.Kind.ToString(),
+                            Amount = p.Amount,
+                            Notes = p.Notes,
+                            IsVoided = p.IsVoided,
+                            UpdatedAtUtc = p.UpdatedAtUtc              // <-- NEW
+                        }).ToList(),
                 History = new List<HistoryDto>()
             };
 
@@ -160,7 +160,6 @@ namespace TravelAgency.Services
                         RoomTypeId = l.RoomTypeId,
                         Quantity = l.Quantity,
                         PricePerNight = l.PricePerNight,
-                        Currency = string.IsNullOrWhiteSpace(l.Currency) ? "EUR" : l.Currency!,
                         Notes = l.Notes
                     });
                 }
@@ -170,14 +169,15 @@ namespace TravelAgency.Services
                     var kind = Enum.TryParse<PaymentKind>(p.Kind, true, out var k) ? k : PaymentKind.Deposit;
                     db.AllotmentPayments.Add(new AllotmentPayment
                     {
+                        Id = p.Id ?? 0,
                         AllotmentId = entity.Id,
                         Date = p.DateUtc.ToLocalTime().Date,
                         Title = string.IsNullOrWhiteSpace(p.Title) ? "Payment" : p.Title.Trim(),
                         Kind = kind,
                         Amount = p.Amount,
-                        Currency = string.IsNullOrWhiteSpace(p.Currency) ? "EUR" : p.Currency!,
                         Notes = p.Notes,
-                        IsVoided = p.IsVoided
+                        IsVoided = p.IsVoided,
+                        UpdatedAtUtc = DateTime.UtcNow                  // <-- NEW
                     });
                 }
 
@@ -233,7 +233,6 @@ namespace TravelAgency.Services
                         target.RoomTypeId = l.RoomTypeId;
                         target.Quantity = l.Quantity;
                         target.PricePerNight = l.PricePerNight;
-                        target.Currency = string.IsNullOrWhiteSpace(l.Currency) ? "EUR" : l.Currency!;
                         target.Notes = l.Notes;
                     }
                     else
@@ -244,7 +243,6 @@ namespace TravelAgency.Services
                             RoomTypeId = l.RoomTypeId,
                             Quantity = l.Quantity,
                             PricePerNight = l.PricePerNight,
-                            Currency = string.IsNullOrWhiteSpace(l.Currency) ? "EUR" : l.Currency!,
                             Notes = l.Notes
                         });
                         // do NOT add to keepLineIds (no Id yet); we only delete from the original snapshot
@@ -267,9 +265,9 @@ namespace TravelAgency.Services
                         found.Title = string.IsNullOrWhiteSpace(p.Title) ? "Payment" : p.Title.Trim();
                         found.Kind = kind;
                         found.Amount = p.Amount;
-                        found.Currency = string.IsNullOrWhiteSpace(p.Currency) ? "EUR" : p.Currency!;
                         found.Notes = p.Notes;
                         found.IsVoided = p.IsVoided;
+                        found.UpdatedAtUtc = DateTime.UtcNow;              // <-- NEW
                         keepPayIds.Add(pid);
                     }
                     else
@@ -281,9 +279,10 @@ namespace TravelAgency.Services
                             Title = string.IsNullOrWhiteSpace(p.Title) ? "Payment" : p.Title.Trim(),
                             Kind = kind,
                             Amount = p.Amount,
-                            Currency = string.IsNullOrWhiteSpace(p.Currency) ? "EUR" : p.Currency!,
                             Notes = p.Notes,
-                            IsVoided = p.IsVoided
+                            IsVoided = p.IsVoided,
+                            UpdatedAtUtc = DateTime.UtcNow             // <-- NEW
+
                         });
                         // do NOT add to keepPayIds (new row, no Id yet)
                     }

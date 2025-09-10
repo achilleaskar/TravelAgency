@@ -57,7 +57,6 @@ namespace TravelAgency.Desktop.ViewModels
         [ObservableProperty] private RoomType? lineRoomType;
         [ObservableProperty] private string? lineTotalQty = "0";
         [ObservableProperty] private string? linePrice = "0";
-        [ObservableProperty] private string? lineCurrency = "EUR";
 
 
         [RelayCommand]
@@ -260,7 +259,6 @@ namespace TravelAgency.Desktop.ViewModels
                         RoomTypeId = l.RoomTypeId,
                         Quantity = l.Quantity,
                         PricePerNight = l.PricePerNight,
-                        Currency = l.Currency
                     });
                 }
                 await db.SaveChangesAsync();
@@ -287,7 +285,6 @@ namespace TravelAgency.Desktop.ViewModels
                         RoomTypeId = l.RoomTypeId,
                         Quantity  = l.Quantity,
                         PricePerNight = l.PricePerNight,
-                        Currency = l.Currency
                     });
                 }
                 await db.SaveChangesAsync();
@@ -348,7 +345,6 @@ namespace TravelAgency.Desktop.ViewModels
                     Quantity  = total,
                     Sold = 0,
                     PricePerNight = price,
-                    Currency = string.IsNullOrWhiteSpace(LineCurrency) ? "EUR" : LineCurrency!
                 });
             }
             else
@@ -358,7 +354,6 @@ namespace TravelAgency.Desktop.ViewModels
                 SelectedLine.Quantity= total;
                 // keep existing Cancelled & Sold
                 SelectedLine.PricePerNight = price;
-                SelectedLine.Currency = string.IsNullOrWhiteSpace(LineCurrency) ? "EUR" : LineCurrency!;
                 OnPropertyChanged(nameof(Lines));
             }
 
@@ -378,7 +373,6 @@ namespace TravelAgency.Desktop.ViewModels
             LineRoomType = null;
             LineTotalQty = "0";
             LinePrice = "0";
-            LineCurrency = "EUR";
             LineCancelQty = "";
             SelectedLine = null;
         }
@@ -416,7 +410,6 @@ namespace TravelAgency.Desktop.ViewModels
                     Quantity  = l.Quantity,
                     Sold = sold,
                     PricePerNight = l.PricePerNight,
-                    Currency = l.Currency
                 });
             }
         }
@@ -431,7 +424,6 @@ namespace TravelAgency.Desktop.ViewModels
             public int Sold { get; set; }
             public int Remaining => Math.Max(0, Quantity - Sold);
             public decimal PricePerNight { get; set; }
-            public string Currency { get; set; } = "EUR";
         }
 
         public class AllotmentRow : ObservableObject

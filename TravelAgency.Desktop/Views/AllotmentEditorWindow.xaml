@@ -177,10 +177,7 @@
                                 <DataGridTextColumn Header="Price/Night"
                                                     Width="120"
                                                     Binding="{Binding PricePerNight, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}}" />
-                                <DataGridTextColumn Header="Currency"
-                                                    Width="90"
-                                                    Binding="{Binding Currency, UpdateSourceTrigger=PropertyChanged}" />
-                                <DataGridTextColumn Header="Notes"
+                                   <DataGridTextColumn Header="Notes"
                                                     MinWidth="80"
                                                     Width="*"
                                                     Binding="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
@@ -248,15 +245,15 @@
                             <DataGridTextColumn Header="Amount"
                                                 Width="130"
                                                 Binding="{Binding Amount, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}}" />
-                            <DataGridTextColumn Header="Currency"
-                                                Width="90"
-                                                Binding="{Binding Currency, UpdateSourceTrigger=PropertyChanged}" />
-                            <DataGridTextColumn Header="Notes"
+                               <DataGridTextColumn Header="Notes"
                                                 Width="*"
                                                 Binding="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
                             <DataGridCheckBoxColumn Header="Voided"
                                                     Width="90"
                                                     Binding="{Binding IsVoided, UpdateSourceTrigger=PropertyChanged}" />
+                            <DataGridTextColumn Header="Updated"
+                                                Width="170"
+                                                Binding="{Binding UpdatedAtLocal, StringFormat=\{0:yyyy-MM-dd HH:mm\}}" />
                         </DataGrid.Columns>
                     </DataGrid>
                 </DockPanel>
@@ -268,9 +265,9 @@
                           AutoGenerateColumns="False"
                           CanUserAddRows="False">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="When (UTC)"
+                        <DataGridTextColumn Header="When"
                                             Width="170"
-                                            Binding="{Binding ChangedAtUtc, StringFormat=\{0:yyyy-MM-dd HH:mm\}}" />
+                                            Binding="{Binding ChangedAtLocal, StringFormat=\{0:yyyy-MM-dd HH:mm\}}" />
                         <DataGridTextColumn Header="By"
                                             Width="120"
                                             Binding="{Binding ChangedBy}" />

@@ -38,9 +38,9 @@ namespace TravelAgency.Desktop.Views
                 {
                     var hotel = i.AllotmentRoomType.Allotment!.Hotel!;
                     var room = i.AllotmentRoomType.RoomType?.Name ?? "Room";
-                    return $"{hotel.Name} • {room} × {i.Qty} @ {i.UnitPrice:0.##} {i.Currency}";
+                    return $"{hotel.Name} • {room} × {i.Qty} @ {i.UnitPrice:0.##} €";
                 }
-                return $"{i.ServiceName} × {i.Qty} @ {i.UnitPrice:0.##} {i.Currency}";
+                return $"{i.ServiceName} × {i.Qty} @ {i.UnitPrice:0.##} €";
             }).ToList();
 
             var payments = r.Payments

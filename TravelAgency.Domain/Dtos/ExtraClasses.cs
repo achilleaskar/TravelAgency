@@ -36,22 +36,24 @@ namespace TravelAgency.Domain.Dtos
         public int RoomTypeId { get; set; }
         public int Quantity { get; set; }
         public decimal PricePerNight { get; set; }
-        public string Currency { get; set; } = "EUR";
         public string? Notes { get; set; }
     }
 
 
-    public class PaymentDto
+    // TravelAgency.Domain/Dtos/PaymentDto.cs
+    public sealed class PaymentDto
     {
-        public int? Id { get; set; }
+        public int? Id { get; set; }                 // already (if you use upsert-by-id)
         public DateTime DateUtc { get; set; }
         public string Title { get; set; } = "";
         public string Kind { get; set; } = "Deposit";
         public decimal Amount { get; set; }
-        public string Currency { get; set; } = "EUR";
         public string? Notes { get; set; }
         public bool IsVoided { get; set; }
+
+        public DateTime? UpdatedAtUtc { get; set; }  // <-- NEW
     }
+
 
     public class HistoryDto
     {

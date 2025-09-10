@@ -246,10 +246,7 @@
                                 <DataGridTextColumn Header="Price/N"
                                                     Binding="{Binding PricePerNight, StringFormat={}{0:0.##}}"
                                                     Width="100" />
-                                <DataGridTextColumn Header="Curr."
-                                                    Binding="{Binding Currency}"
-                                                    Width="70" />
-                            </DataGrid.Columns>
+                                  </DataGrid.Columns>
                         </DataGrid>
                         <!-- Line editor -->
                         <Grid Margin="0,0,0,8">
@@ -286,13 +283,7 @@
                             <TextBox   Grid.Column="7"
                                        Text="{Binding LinePrice}"
                                        IsEnabled="{Binding IsEditing}" />
-                            <TextBlock Grid.Column="9"
-                                       Text="Currency"
-                                       Style="{StaticResource FormLabel}" />
-                            <TextBox   Grid.Column="10"
-                                       Text="{Binding LineCurrency}"
-                                       IsEnabled="{Binding IsEditing}" />
-                        </Grid>
+                             </Grid>
                         <StackPanel Orientation="Horizontal"
                                     Margin="0,0,0,8">
                             <Button Content="Add / Update Line"

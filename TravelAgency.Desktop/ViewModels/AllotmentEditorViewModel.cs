@@ -223,7 +223,6 @@ namespace TravelAgency.Desktop.ViewModels
                     RoomType = RoomTypes.FirstOrDefault(r => r.Id == l.RoomTypeId),
                     Quantity = l.Quantity,
                     PricePerNight = l.PricePerNight,
-                    Currency = l.Currency,
                     Notes = l.Notes
                 };
                 HookLine(vm);
@@ -233,17 +232,21 @@ namespace TravelAgency.Desktop.ViewModels
             Payments.Clear();
             foreach (var p in dto.Payments.OrderBy(p => p.DateUtc))
             {
-                Payments.Add(new PaymentVM
+                var vm = new PaymentVM
                 {
+                    Id = p.Id,
                     Date = p.DateUtc.ToLocalTime().Date,
                     Title = p.Title,
                     Kind = p.Kind,
                     Amount = p.Amount,
-                    Currency = p.Currency,
                     Notes = p.Notes,
-                    IsVoided = p.IsVoided
-                });
+                    IsVoided = p.IsVoided,
+                    UpdatedAtLocal = p.UpdatedAtUtc?.ToLocalTime()   // <-- NEW
+                };
+                HookPayment(vm);          // <-- add this
+                Payments.Add(vm);
             }
+
 
             History.Clear();
             foreach (var h in dto.History.OrderByDescending(x => x.ChangedAtUtc))
@@ -288,7 +291,6 @@ namespace TravelAgency.Desktop.ViewModels
                 RoomType = RoomTypes.FirstOrDefault(),
                 Quantity = 1,
                 PricePerNight = 0m,
-                Currency = "EUR",
                 Notes = ""
             };
             HookLine(vm);
@@ -311,6 +313,17 @@ namespace TravelAgency.Desktop.ViewModels
             };
         }
 
+        private void HookPayment(PaymentVM vm)
+        {
+            vm.PropertyChanged += (_, __) =>
+            {
+                RecalcTotals();      // Amount / IsVoided changes update totals
+                MarkDirty();         // enable Save (or at least mark CanSave)
+                RaiseCanExec();      // re-evaluate commands
+                OnPropertyChanged(nameof(CanSave)); // if you're binding IsEnabled to CanSave
+            };
+        }
+
 
         private void RemoveSelectedLine()
         {
@@ -323,19 +336,17 @@ namespace TravelAgency.Desktop.ViewModels
 
         private void AddPayment()
         {
-            Payments.Add(new PaymentVM
+            var vm = new PaymentVM
             {
                 Date = DateTime.Today,
                 Title = "Payment",
                 Kind = "Deposit",
                 Amount = 0m,
-                Currency = "EUR",
                 Notes = "",
                 IsVoided = false
-            });
-            RecalcTotals();
-            MarkDirty();
-            RaiseCanExec();
+            };
+            HookPayment(vm);          // <-- add this
+            Payments.Add(vm);
         }
 
         private void RemoveSelectedPayment()
@@ -371,16 +382,15 @@ namespace TravelAgency.Desktop.ViewModels
                     RoomTypeId = l.RoomType?.Id ?? 0,
                     Quantity = l.Quantity,
                     PricePerNight = l.PricePerNight,
-                    Currency = l.Currency,
                     Notes = l.Notes
                 }).ToList(),
                 Payments = Payments.Select(p => new PaymentDto
                 {
+                    Id=p.Id,
                     DateUtc = p.Date.ToUniversalTime(),
                     Title = p.Title,
                     Kind = p.Kind,
                     Amount = p.Amount,
-                    Currency = p.Currency,
                     Notes = p.Notes,
                     IsVoided = p.IsVoided
                 }).ToList()

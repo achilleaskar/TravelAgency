@@ -163,7 +163,7 @@ namespace TravelAgency.Desktop.ViewModels
                         {
                             State = state,
                             Text = free > 0 ? free.ToString() : "0",
-                            Tooltip = $"{a.Title} | Free: {free}/{rt.Quantity}\nPrice: {rt.PricePerNight:0.##} {rt.Currency}"
+                            Tooltip = $"{a.Title} | Free: {free}/{rt.Quantity}\nPrice: {rt.PricePerNight:0.##} €"
                         });
                     }
 

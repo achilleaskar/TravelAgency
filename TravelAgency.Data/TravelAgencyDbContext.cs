@@ -52,6 +52,7 @@ public class TravelAgencyDbContext : DbContext
         b.Entity<Hotel>().Property(x => x.Notes).HasMaxLength(2000);
         b.Entity<Allotment>().Property(x => x.Notes).HasMaxLength(2000);
         b.Entity<Reservation>().Property(x => x.Notes).HasMaxLength(2000);
+        b.Entity<AllotmentPayment>().Property(p => p.UpdatedAtUtc).HasDefaultValueSql("CURRENT_TIMESTAMP(6)");
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
