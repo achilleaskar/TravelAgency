@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace TravelAgency.Domain.Models
+﻿namespace TravelAgency.Domain.Models
 {
     public class AvailableAllotmentDto
     {

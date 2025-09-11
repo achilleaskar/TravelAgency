@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using Microsoft.EntityFrameworkCore;
 using TravelAgency.Data;
 
@@ -26,7 +24,7 @@ namespace TravelAgency.Desktop.Views
                 .Where(r => r.CustomerId == _customerId)
                 .OrderByDescending(r => r.UpdatedAt)
                 .Take(10)
-                .Select(r => r.Title)
+                .Select(r => $"Reservation #{r.Id} • {r.CheckIn:dd/MM}–{r.CheckOut:dd/MM}")
                 .ToListAsync();
 
             var logs = await db.UpdateLogs

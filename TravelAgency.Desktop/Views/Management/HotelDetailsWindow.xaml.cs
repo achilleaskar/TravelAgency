@@ -1,7 +1,5 @@
 ﻿using System.Windows;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
-using System.Threading.Tasks;
 using TravelAgency.Data;
 
 namespace TravelAgency.Desktop.Views

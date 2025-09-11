@@ -1,5 +1,4 @@
 ﻿// Domain/Entities/AllotmentPayment.cs
-using TravelAgency.Domain.Entities;
 using TravelAgency.Domain.Enums;
 
 namespace TravelAgency.Domain.Entities;

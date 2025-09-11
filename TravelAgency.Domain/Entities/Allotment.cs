@@ -1,8 +1,6 @@
 ﻿// Domain/Entities/Allotment.cs
 using System.ComponentModel.DataAnnotations.Schema;
-using TravelAgency.Domain.Entities;
 using TravelAgency.Domain.Enums;
-using TravelAgency.Domain.Entities;
 
 namespace TravelAgency.Domain.Entities;
 

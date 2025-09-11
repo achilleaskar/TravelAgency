@@ -6,48 +6,62 @@
         xmlns:views="clr-namespace:TravelAgency.Desktop.Views"
         xmlns:local="clr-namespace:TravelAgency.Desktop"
         mc:Ignorable="d"
+        xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+        xmlns:conv="clr-namespace:TravelAgency.Desktop.Converters"
         Title="Travel Agency"
         Background="White"
-        Width="1200"
+        Width="1400"
         Height="800">
-    <DockPanel>
-        <!-- Alerts bar stays as is -->
-        <TabControl>
-            <TabItem Header="Dashboard">
-                <views:DashboardView />
-            </TabItem>
-
-            <TabItem Header="Plan">
-                <views:PlanView />
-            </TabItem>
-
-            <!-- moved to top level -->
-            <TabItem Header="Reservations">
-                <views:ReservationsView />
-            </TabItem>
-
-            <!-- moved to top level -->
-            <TabItem Header="Allotments">
-                <views:AllotmentsView />
-            </TabItem>
-
-            <!-- keep the “masters” under Manage -->
-            <TabItem Header="Manage">
-                <TabControl>
-                    <TabItem Header="Hotels">
-                        <views:HotelsView />
-                    </TabItem>
-                    <TabItem Header="Room Types">
-                        <views:RoomTypesView />
-                    </TabItem>
-                    <TabItem Header="Customers">
-                        <views:CustomersView />
-                    </TabItem>
-                    <TabItem Header="Cities">
-                        <views:CitiesView />
-                    </TabItem>
-                </TabControl>
-            </TabItem>
-        </TabControl>
-    </DockPanel>
+    <Window.Resources>
+        <conv:BooleanToCursorConverter x:Key="BoolToCursor" />
+    </Window.Resources>
+    <Grid>
+        <DockPanel>
+            <!-- Alerts bar stays as is -->
+            <TabControl>
+                <TabItem Header="Dashboard">
+                    <views:DashboardView />
+                </TabItem>
+                <TabItem Header="Plan">
+                    <views:PlanView />
+                </TabItem>
+                <!-- moved to top level -->
+                <TabItem Header="Reservations">
+                    <views:ReservationsView />
+                </TabItem>
+                <!-- moved to top level -->
+                <TabItem Header="Allotments">
+                    <views:AllotmentsView />
+                </TabItem>
+                <!-- keep the “masters” under Manage -->
+                <TabItem Header="Manage">
+                    <TabControl>
+                        <TabItem Header="Hotels">
+                            <views:HotelsView />
+                        </TabItem>
+                        <TabItem Header="Room Types">
+                            <views:RoomTypesView />
+                        </TabItem>
+                        <TabItem Header="Customers">
+                            <views:CustomersView />
+                        </TabItem>
+                        <TabItem Header="Cities">
+                            <views:CitiesView />
+                        </TabItem>
+                    </TabControl>
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+        <!-- Busy overlay -->
+        <Border Background="#80000000"
+                Visibility="{Binding IsBusy,Converter={StaticResource BoolToCursor}}">
+            <Grid>
+                <mah:ProgressRing IsActive="True"
+                                  Width="64"
+                                  Height="64"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

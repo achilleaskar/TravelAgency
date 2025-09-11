@@ -86,15 +86,12 @@
                     <MouseBinding MouseAction="LeftDoubleClick"
                                   Command="{Binding EditSelectedCommand}" />
                 </DataGrid.InputBindings>
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Title"
-                                        Binding="{Binding Title}"
-                                        Width="*" />
+                <DataGrid.Columns> 
                     <DataGridTextColumn Header="From"
-                                        Binding="{Binding StartDate, StringFormat=dd/MM/yyyy}"
+                                        Binding="{Binding CheckIn, StringFormat=dd/MM/yyyy}"
                                         Width="110" />
                     <DataGridTextColumn Header="To"
-                                        Binding="{Binding EndDate,   StringFormat=dd/MM/yyyy}"
+                                        Binding="{Binding CheckOut,   StringFormat=dd/MM/yyyy}"
                                         Width="110" />
                     <DataGridTextColumn Header="Status"
                                         Binding="{Binding Status}"

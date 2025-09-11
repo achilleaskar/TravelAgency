@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TravelAgency.Domain.Entities;
-using TravelAgency.Domain.Entities;
 
 namespace TravelAgency.Data;
 
@@ -11,10 +10,11 @@ public class TravelAgencyDbContext : DbContext
     public DbSet<Hotel> Hotels => Set<Hotel>();
     public DbSet<RoomType> RoomTypes => Set<RoomType>();
     public DbSet<Allotment> Allotments => Set<Allotment>();
+    public DbSet<Reservation> Reservations { get; set; } = null!;
+    public DbSet<ReservationLine> ReservationLines { get; set; } = null!;
+    public DbSet<ReservationPayment> ReservationPayments { get; set; } = null!;
     public DbSet<AllotmentRoomType> AllotmentRoomTypes => Set<AllotmentRoomType>();
     public DbSet<Customer> Customers => Set<Customer>();
-    public DbSet<Reservation> Reservations => Set<Reservation>();
-    public DbSet<ReservationItem> ReservationItems => Set<ReservationItem>();
     public DbSet<Payment> Payments => Set<Payment>();
 
     public DbSet<AllotmentPayment> AllotmentPayments => Set<AllotmentPayment>();
@@ -27,6 +27,35 @@ public class TravelAgencyDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.Entity<Reservation>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasMany(x => x.Lines)
+                .WithOne(x => x.Reservation)
+                .HasForeignKey(x => x.ReservationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasMany(x => x.Payments)
+                .WithOne(x => x.Reservation)
+                .HasForeignKey(x => x.ReservationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ReservationLine
+        b.Entity<ReservationLine>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasOne(x => x.AllotmentRoomType)
+                .WithMany() // not navigating back; ok
+                .HasForeignKey(x => x.AllotmentRoomTypeId)
+                .OnDelete(DeleteBehavior.Restrict); // keep inventory rows safe
+        });
+
+        // ReservationPayment
+        b.Entity<ReservationPayment>(e =>
+        {
+            e.HasKey(x => x.Id);
+        });
         b.Entity<City>().HasIndex(x => new { x.Name, x.Country }).IsUnique();
         b.Entity<Hotel>().HasIndex(x => new { x.Name, x.CityId });
         b.Entity<RoomType>().HasIndex(x => x.Code).IsUnique();
@@ -40,12 +69,6 @@ public class TravelAgencyDbContext : DbContext
         b.Entity<AllotmentRoomType>().HasIndex(x => new { x.AllotmentId, x.RoomTypeId }).IsUnique();
 
         b.Entity<Customer>().HasIndex(x => x.Name);
-
-        b.Entity<Reservation>().HasIndex(x => x.DepositDueDate);
-        b.Entity<Reservation>().HasIndex(x => x.BalanceDueDate);
-        b.Entity<Reservation>().HasMany(x => x.Items).WithOne(x => x.Reservation).HasForeignKey(x => x.ReservationId);
-
-        b.Entity<ReservationItem>().HasIndex(x => x.AllotmentRoomTypeId);
 
         // Map AuditableEntity properties for each derived type
         b.Entity<Customer>().Property(x => x.Notes).HasMaxLength(2000);

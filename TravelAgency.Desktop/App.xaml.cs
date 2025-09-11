@@ -1,8 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Windows;
+using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System.Windows;
 using TravelAgency.Data;
 using TravelAgency.Desktop.ViewModels;
 using TravelAgency.Services;
@@ -20,6 +21,24 @@ public partial class App : Application
     {
         try
         {
+            AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+            {
+                TryLog($"[AppDomain] {args.ExceptionObject}");
+            };
+
+            DispatcherUnhandledException += (_, args) =>
+            {
+                TryLog($"[Dispatcher] {args.Exception}");
+                args.Handled = true; // prevent hard crash
+                MessageBox.Show(args.Exception.Message, "Unhandled UI error");
+            };
+
+            TaskScheduler.UnobservedTaskException += (_, args) =>
+            {
+                TryLog($"[TaskScheduler] {args.Exception}");
+                args.SetObserved();
+            };
+
             var builder = Host.CreateDefaultBuilder()
                 .ConfigureServices((ctx, services) =>
                 {
@@ -37,9 +56,11 @@ public partial class App : Application
 
                     // Lookup cache (shared)
                     services.AddSingleton<LookupCacheService>();
+                    services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
 
                     // Services already here...
                     services.AddScoped<IAllotmentService, AllotmentService>();
+                    services.AddScoped<IReservationService, ReservationService>();
                     services.AddScoped<ReservationService>();
                     services.AddScoped<AlertService>();
 
@@ -81,5 +102,11 @@ public partial class App : Application
             MessageBox.Show(ex.ToString(), "Startup error", MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(-1);
         }
+    }
+
+    private static void TryLog(string msg)
+    {
+        try { System.Diagnostics.Trace.TraceError(msg); }
+        catch { /* ignore */ }
     }
 }

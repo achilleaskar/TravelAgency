@@ -1,8 +1,4 @@
 ﻿// Services/AllotmentService.cs
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using TravelAgency.Data;
 using TravelAgency.Desktop.ViewModels;
@@ -182,7 +178,7 @@ namespace TravelAgency.Services
                 }
 
                 await db.SaveChangesAsync();
-                return new SaveResult { Success = true, Id = entity.Id };
+                return new SaveResult { Success = true, Id = entity.Id, History = null};
             }
             else
             {

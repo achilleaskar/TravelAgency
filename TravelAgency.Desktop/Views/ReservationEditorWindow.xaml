@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Reservation"
-        Width="1100"
+        Width="1200"
         Height="760"
         Background="White"
         WindowStartupLocation="CenterOwner">
@@ -33,96 +33,188 @@
                     Command="{Binding CancelCommand}" />
         </Grid>
         <TabControl Margin="12">
-            <!-- Main -->
             <TabItem Header="Main">
-                <Grid Margin="8">
+                <Grid Margin="8"
+                      Grid.IsSharedSizeScope="True">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="420" />
+                        <!-- left: fields + availability -->
                         <ColumnDefinition Width="16" />
                         <ColumnDefinition Width="*" />
+                        <!-- right: selected lines -->
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*" />
                         <RowDefinition Height="12" />
                         <RowDefinition Height="Auto" />
+                        <!-- totals -->
                     </Grid.RowDefinitions>
-                    <!-- Left: fields -->
-                    <Border Grid.Column="0"
-                            Padding="12"
-                            BorderBrush="#DDD"
-                            BorderThickness="1"
-                            CornerRadius="8">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="160" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0"
-                                       Text="Customer"
-                                       VerticalAlignment="Center" />
-                            <ComboBox  Grid.Row="0"
-                                       Grid.Column="1"
-                                       ItemsSource="{Binding Customers}"
-                                       SelectedValuePath="Id"
-                                       DisplayMemberPath="Name"
-                                       SelectedValue="{Binding CustomerId, Mode=TwoWay}" />
-                            <TextBlock Grid.Row="2"
-                                       Text="City"
-                                       VerticalAlignment="Center" />
-                            <ComboBox  Grid.Row="2"
-                                       Grid.Column="1"
-                                       ItemsSource="{Binding Cities}"
-                                       DisplayMemberPath="Name"
-                                       SelectedItem="{Binding SelectedCity}" />
-                            <TextBlock Grid.Row="4"
-                                       Text="Hotel"
-                                       VerticalAlignment="Center" />
-                            <ComboBox  Grid.Row="4"
-                                       Grid.Column="1"
-                                       ItemsSource="{Binding FilteredHotels}"
-                                       DisplayMemberPath="Name"
-                                       SelectedItem="{Binding SelectedHotel}" />
-                            <TextBlock Grid.Row="6"
-                                       Text="Check-in"
-                                       VerticalAlignment="Center" />
-                            <DatePicker Grid.Row="6"
-                                        Grid.Column="1"
-                                        SelectedDate="{Binding CheckIn}" />
-                            <TextBlock Grid.Row="8"
-                                       Text="Check-out"
-                                       VerticalAlignment="Center" />
-                            <DatePicker Grid.Row="8"
-                                        Grid.Column="1"
-                                        SelectedDate="{Binding CheckOut}" />
-                            <TextBlock Grid.Row="10"
-                                       Text="Nights"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Grid.Row="10"
-                                       Grid.Column="1"
-                                       Text="{Binding Nights}"
-                                       FontWeight="SemiBold" />
-                        </Grid>
-                    </Border>
-                    <!-- Right: lines -->
+                    <!-- LEFT: Basic info + Availability -->
+                    <StackPanel Grid.Column="0"
+                                Orientation="Vertical" >
+                        <!-- Basic info -->
+                        <Border Padding="12"
+                                BorderBrush="#DDD"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160"
+                                                      SharedSizeGroup="labels" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0"
+                                           Text="Customer"
+                                           VerticalAlignment="Center" />
+                                <ComboBox Grid.Row="0"
+                                          Grid.Column="1"
+                                          ItemsSource="{Binding Customers}"
+                                          DisplayMemberPath="Name"
+                                          SelectedItem="{Binding SelectedCustomer, Mode=TwoWay}" />
+                                <TextBlock Grid.Row="2"
+                                           Text="City"
+                                           VerticalAlignment="Center" />
+                                <ComboBox  Grid.Row="2"
+                                           Grid.Column="1"
+                                           ItemsSource="{Binding Cities}"
+                                           DisplayMemberPath="Name"
+                                           SelectedItem="{Binding SelectedCity}" />
+                                <TextBlock Grid.Row="4"
+                                           Text="Hotel"
+                                           VerticalAlignment="Center" />
+                                <ComboBox  Grid.Row="4"
+                                           Grid.Column="1"
+                                           ItemsSource="{Binding FilteredHotels}"
+                                           DisplayMemberPath="Name"
+                                           SelectedItem="{Binding SelectedHotel}" />
+                                <TextBlock Grid.Row="6"
+                                           Text="Check-in"
+                                           VerticalAlignment="Center" />
+                                <DatePicker Grid.Row="6"
+                                            Grid.Column="1"
+                                            SelectedDate="{Binding CheckIn}" />
+                                <TextBlock Grid.Row="8"
+                                           Text="Check-out"
+                                           VerticalAlignment="Center" />
+                                <DatePicker Grid.Row="8"
+                                            Grid.Column="1"
+                                            SelectedDate="{Binding CheckOut}" />
+                                <TextBlock Grid.Row="10"
+                                           Text="Nights"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Grid.Row="10"
+                                           Grid.Column="1"
+                                           Text="{Binding Nights}"
+                                           FontWeight="SemiBold" />
+                            </Grid>
+                        </Border>
+                        <!-- Availability (under basic info) -->
+                        <Border Padding="12"
+                                BorderBrush="#DDD"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <StackPanel>
+                                <TextBlock Text="Find availability"
+                                           FontWeight="SemiBold"
+                                           Margin="0,0,0,6" />
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="5" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <!-- Row 0: Check-in / Check-out -->
+                                    <TextBlock Grid.Row="0"
+                                               Grid.Column="0"
+                                               Text="Check-in"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,8,0" />
+                                    <DatePicker Grid.Row="0"
+                                                Grid.Column="1"
+                                                SelectedDate="{Binding CheckIn}"
+                                                 />
+                                    <TextBlock Grid.Row="0"
+                                               Grid.Column="3"
+                                               Text="Check-out"
+                                               VerticalAlignment="Center"
+                                               Margin="12,0,8,0" />
+                                    <DatePicker Grid.Row="0"
+                                                Grid.Column="4"
+                                                SelectedDate="{Binding CheckOut}"
+                                                  />
+                                    <!-- Row 1: Hotel / Search -->
+                                    <TextBlock Grid.Row="1"
+                                               Grid.Column="0"
+                                               Text="Hotel"
+                                               VerticalAlignment="Center"
+                                               Margin="0,8,8,0" />
+                                    <ComboBox Grid.Row="1"
+                                              Grid.Column="1"
+                                              ItemsSource="{Binding Hotels}"
+                                              DisplayMemberPath="Name"
+                                              SelectedItem="{Binding SelectedHotel}"
+                                              Margin="0,8,0,0" />
+                                    <Button Grid.Row="1"
+                                            Grid.Column="4"
+                                            Content="Search"
+                                            Command="{Binding SearchAvailabilityCommand}"
+                                            Margin="12,8,0,0" />
+                                </Grid>
+                                <DataGrid ItemsSource="{Binding AvailableOptions}"
+                                          SelectedItem="{Binding SelectedAvailableOption}"
+                                          AutoGenerateColumns="False"
+                                          CanUserAddRows="False"
+                                          HeadersVisibility="Column"
+                                          MaxHeight="220" 
+                                          Margin="0,4,0,6">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Hotel"
+                                                            Width="*"
+                                                            Binding="{Binding HotelName}" />
+                                        <DataGridTextColumn Header="Room Type"
+                                                            Width="*"
+                                                            Binding="{Binding RoomTypeName}" />
+                                        <DataGridTextColumn Header="Price/Night"
+                                                            Width="110"
+                                                            Binding="{Binding PricePerNight, StringFormat={}{0:0.##}}" />
+                                        <DataGridTextColumn Header="Free (min)"
+                                                            Width="90"
+                                                            Binding="{Binding FreeMinOverNights}" />
+                                        <DataGridTextColumn Header="Capacity"
+                                                            Width="90"
+                                                            Binding="{Binding TotalCapacity}" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                                <Button Content="Add selected"
+                                        HorizontalAlignment="Right"
+                                        Command="{Binding AddOptionToReservationCommand}"
+                                        CommandParameter="{Binding SelectedAvailableOption}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <!-- RIGHT: Selected lines -->
                     <DockPanel Grid.Column="2">
                         <ToolBar DockPanel.Dock="Top">
-                            <Button Content="Add Line"
-                                    Command="{Binding AddLineCommand}" />
-                            <Button Content="Remove"
-                                    Margin="8,0,0,0"
+                            <Button Content="Remove line"
                                     Command="{Binding RemoveSelectedLineCommand}" />
                             <Separator />
                             <TextBlock Text="Total:"
@@ -132,46 +224,34 @@
                                        FontWeight="Bold"
                                        VerticalAlignment="Center" />
                         </ToolBar>
-                        <DataGrid ItemsSource="{Binding Lines}"
+                        <DataGrid Margin="0,8,0,0"
+                                  ItemsSource="{Binding Lines}"
                                   SelectedItem="{Binding SelectedLine}"
                                   AutoGenerateColumns="False"
                                   CanUserAddRows="False"
-                                  Margin="0,8,0,0">
+                                  MaxHeight="260">
+                            <!-- 1–5 rows -> compact -->
                             <DataGrid.Columns>
-                                <!-- Use template to avoid ComboBox column quirks -->
-                                <DataGridTemplateColumn Header="Room Type"
-                                                        Width="220">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding RoomType.Name}" />
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                    <DataGridTemplateColumn.CellEditingTemplate>
-                                        <DataTemplate>
-                                            <ComboBox ItemsSource="{Binding DataContext.RoomTypes, RelativeSource={RelativeSource AncestorType=DataGrid}}"
-                                                      DisplayMemberPath="Name"
-                                                      SelectedValuePath="Id"
-                                                      SelectedValue="{Binding RoomTypeId, Mode=TwoWay}" />
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellEditingTemplate>
-                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Allotment / Room Type"
+                                                    Width="2*"
+                                                    Binding="{Binding Display}" />
                                 <DataGridTextColumn Header="Qty"
-                                                    Width="80"
+                                                    Width="70"
                                                     Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0}}" />
                                 <DataGridTextColumn Header="Price/Night"
-                                                    Width="120"
+                                                    Width="110"
                                                     Binding="{Binding PricePerNight, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}}" />
                                 <DataGridTextColumn Header="Notes"
                                                     Width="*"
                                                     Binding="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
                                 <DataGridTextColumn Header="Line Total"
-                                                    Width="120"
+                                                    Width="110"
                                                     IsReadOnly="True"
                                                     Binding="{Binding LineTotal, StringFormat={}{0:0.##}}" />
                             </DataGrid.Columns>
                         </DataGrid>
                     </DockPanel>
-                    <!-- Totals -->
+                    <!-- Totals footer -->
                     <Border Grid.Row="2"
                             Grid.ColumnSpan="3"
                             Padding="12"

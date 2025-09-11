@@ -1,8 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using MySqlConnector;
 using System.Data;
 using TravelAgency.Data;
-using TravelAgency.Domain.Entities;
 using TravelAgency.Domain.Enums;
 
 namespace TravelAgency.Services;
@@ -12,71 +10,71 @@ public class AlertService
     private readonly IDbContextFactory<TravelAgencyDbContext> _dbf;
     public AlertService(IDbContextFactory<TravelAgencyDbContext> dbf) => _dbf = dbf;
 
-    public async Task<bool> ReserveRoomsAsync(int reservationId, int allotmentRoomTypeId, int qty, CancellationToken ct = default)
-    {
-        await using var db = await _dbf.CreateDbContextAsync(ct);
+    //public async Task<bool> ReserveRoomsAsync(int reservationId, int allotmentRoomTypeId, int qty, CancellationToken ct = default)
+    //{
+    //    await using var db = await _dbf.CreateDbContextAsync(ct);
 
-        var strategy = db.Database.CreateExecutionStrategy();
+    //    var strategy = db.Database.CreateExecutionStrategy();
 
-        return await strategy.ExecuteAsync(async () =>
-        {
-            for (int attempt = 1; attempt <= 3; attempt++)
-            {
-                try
-                {
-                    await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
+    //    return await strategy.ExecuteAsync(async () =>
+    //    {
+    //        for (int attempt = 1; attempt <= 3; attempt++)
+    //        {
+    //            try
+    //            {
+    //                await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, ct);
 
-                    // lock the line row to serialize concurrent checks
-                    await db.Database.ExecuteSqlInterpolatedAsync(
-                        $"SELECT 1 FROM `AllotmentRoomTypes` WHERE `Id` = {allotmentRoomTypeId} FOR UPDATE", ct);
+    //                // lock the line row to serialize concurrent checks
+    //                await db.Database.ExecuteSqlInterpolatedAsync(
+    //                    $"SELECT 1 FROM `AllotmentRoomTypes` WHERE `Id` = {allotmentRoomTypeId} FOR UPDATE", ct);
 
-                    var art = await db.AllotmentRoomTypes
-                        .Include(x => x.Allotment)
-                        .FirstAsync(x => x.Id == allotmentRoomTypeId, ct);
+    //                var art = await db.AllotmentRoomTypes
+    //                    .Include(x => x.Allotment)
+    //                    .FirstAsync(x => x.Id == allotmentRoomTypeId, ct);
 
-                    var reservedQty = await db.ReservationItems
-                        .Where(x => x.AllotmentRoomTypeId == allotmentRoomTypeId &&
-                                    x.Reservation!.Status != ReservationStatus.Cancelled)
-                        .SumAsync(x => (int?)x.Qty, ct) ?? 0;
+    //                var reservedQty = await db.ReservationItems
+    //                    .Where(x => x.AllotmentRoomTypeId == allotmentRoomTypeId &&
+    //                                x.Reservation!.Status != ReservationStatus.Cancelled)
+    //                    .SumAsync(x => (int?)x.Qty, ct) ?? 0;
 
-                    // NEW: availability per the new model
-                    var available = art.Quantity- reservedQty;
-                    if (qty > available)
-                    {
-                        await tx.RollbackAsync(ct);
-                        return false; // not enough remaining
-                    }
+    //                // NEW: availability per the new model
+    //                var available = art.Quantity- reservedQty;
+    //                if (qty > available)
+    //                {
+    //                    await tx.RollbackAsync(ct);
+    //                    return false; // not enough remaining
+    //                }
 
-                    db.ReservationItems.Add(new ReservationItem
-                    {
-                        ReservationId = reservationId,
-                        Kind = ReservationItemKind.AllotmentRoom,
-                        AllotmentRoomTypeId = allotmentRoomTypeId,
-                        Qty = qty,
-                        UnitPrice = art.PricePerNight,
-                        StartDate = art.Allotment!.StartDate,
-                        EndDate = art.Allotment!.EndDate
-                    });
+    //                db.ReservationItems.Add(new ReservationItem
+    //                {
+    //                    ReservationId = reservationId,
+    //                    Kind = ReservationItemKind.AllotmentRoom,
+    //                    AllotmentRoomTypeId = allotmentRoomTypeId,
+    //                    Qty = qty,
+    //                    UnitPrice = art.PricePerNight,
+    //                    StartDate = art.Allotment!.StartDate,
+    //                    EndDate = art.Allotment!.EndDate
+    //                });
 
-                    await db.SaveChangesAsync(ct);
-                    await tx.CommitAsync(ct);
-                    return true;
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (attempt == 3) throw;
-                    await Task.Delay(80 * attempt * attempt, ct);
-                }
-                catch (MySqlConnector.MySqlException ex) when (ex.Number == 1213 || ex.Number == 1205) // deadlock / lock wait timeout
-                {
-                    if (attempt == 3) throw;
-                    await Task.Delay(100 * attempt * attempt, ct);
-                }
-            }
+    //                await db.SaveChangesAsync(ct);
+    //                await tx.CommitAsync(ct);
+    //                return true;
+    //            }
+    //            catch (DbUpdateConcurrencyException)
+    //            {
+    //                if (attempt == 3) throw;
+    //                await Task.Delay(80 * attempt * attempt, ct);
+    //            }
+    //            catch (MySqlConnector.MySqlException ex) when (ex.Number == 1213 || ex.Number == 1205) // deadlock / lock wait timeout
+    //            {
+    //                if (attempt == 3) throw;
+    //                await Task.Delay(100 * attempt * attempt, ct);
+    //            }
+    //        }
 
-            return false;
-        });
-    }
+    //        return false;
+    //    });
+    //}
 
 
     public async Task<List<AlertDto>> GetAlertsAsync(
@@ -127,8 +125,7 @@ public class AlertService
         // If hotel/country filters are set, join to items->allotment->hotel
         if (hotelId != null || !string.IsNullOrWhiteSpace(country))
         {
-            resQ = resQ.Where(r => r.Items.Any(i =>
-                i.AllotmentRoomTypeId != null &&
+            resQ = resQ.Where(r => r.Lines.Any(i =>
                 db.AllotmentRoomTypes
                     .Where(x => x.Id == i.AllotmentRoomTypeId)
                     .Any(x => (hotelId == null || x.Allotment!.HotelId == hotelId) &&
@@ -138,19 +135,20 @@ public class AlertService
         var resList = await resQ.AsNoTracking().ToListAsync();
 
         var dep = resList.Where(r => r.DepositDueDate != null)
-            .Select(r => new AlertDto(
-                $"Reservation deposit for {r.Title} due {r.DepositDueDate:dd/MM}",
-                r.DepositDueDate!.Value,
-                r.DepositDueDate!.Value <= today.AddDays(1) ? Severity.Danger : Severity.Warning,
-                $"reservation:{r.Id}",
-                HotelName: null, // optional enrich later if you want top hotel name
-                Country: null,
-                CustomerName: r.Customer!.Name
-            ));
+                .Select(r => new AlertDto(
+                    $"Reservation at {r.Lines.First().AllotmentRoomType.Allotment?.Hotel?.Name ?? "error hotel name"} for {r.Customer!.Name}",
+                    r.DepositDueDate!.Value,
+                    r.DepositDueDate!.Value <= today.AddDays(1) ? Severity.Danger : Severity.Warning,
+                    $"reservation:{r.Id}",
+                    HotelName: r.Lines.FirstOrDefault()?.AllotmentRoomType.Allotment?.Hotel?.Name ?? "error hotel name",
+                    Country: null,
+                    CustomerName: r.Customer!.Name
+                ));
+
 
         var bal = resList.Where(r => r.BalanceDueDate != null)
             .Select(r => new AlertDto(
-                $"Reservation balance for {r.Title} due {r.BalanceDueDate:dd/MM}",
+                $"Reservation at {r.Lines.First().AllotmentRoomType.Allotment?.Hotel?.Name ?? "error hotel name"} for {r.Customer!.Name}",
                 r.BalanceDueDate!.Value,
                 r.BalanceDueDate!.Value <= today.AddDays(1) ? Severity.Danger : Severity.Warning,
                 $"reservation:{r.Id}",

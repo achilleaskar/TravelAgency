@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using Microsoft.EntityFrameworkCore;
 using TravelAgency.Data;
 
@@ -22,7 +20,7 @@ namespace TravelAgency.Desktop.Views
         {
             var r = await db.Reservations
                 .Include(x => x.Customer)
-                .Include(x => x.Items)!.ThenInclude(i => i.AllotmentRoomType)!.ThenInclude(art => art!.Allotment)!.ThenInclude(a => a!.Hotel)!.ThenInclude(h => h!.City)
+                .Include(x => x.Lines)!.ThenInclude(i => i.AllotmentRoomType)!.ThenInclude(art => art!.Allotment)!.ThenInclude(a => a!.Hotel)!.ThenInclude(h => h!.City)
                 .Include(x => x.Payments)
                 .AsNoTracking()
                 .FirstAsync(x => x.Id == _reservationId);
@@ -32,27 +30,27 @@ namespace TravelAgency.Desktop.Views
                 .OrderByDescending(x => x.ChangedAtUtc).Take(100)
                 .AsNoTracking().ToListAsync();
 
-            var items = r.Items.Select(i =>
+            var items = r.Lines.Select(i =>
             {
                 if (i.AllotmentRoomType != null)
                 {
                     var hotel = i.AllotmentRoomType.Allotment!.Hotel!;
                     var room = i.AllotmentRoomType.RoomType?.Name ?? "Room";
-                    return $"{hotel.Name} • {room} × {i.Qty} @ {i.UnitPrice:0.##} €";
+                    return $"{hotel.Name} • {room} × {i.Quantity} @ {i.PricePerNight:0.##} €";
                 }
-                return $"{i.ServiceName} × {i.Qty} @ {i.UnitPrice:0.##} €";
+                return $"{i.AllotmentRoomType?.RoomType?.Name??"error room type"} × {i.Quantity} @ {i.PricePerNight:0.##} €";
             }).ToList();
 
             var payments = r.Payments
-                .OrderByDescending(p => p.PaymentDate)
-                .Select(p => $"{p.PaymentDate:dd/MM/yyyy} • {p.Amount:0.##} ({p.Method}) {p.Notes}")
+                .OrderByDescending(p => p.Date)
+                .Select(p => $"{p.Date:dd/MM/yyyy} • {p.Amount:0.##} ({p.Kind}) {p.Notes}")
                 .ToList();
-
+            var label = $"Reservation #{r.Id} – {r.CheckIn:yyyy-MM-dd} → {r.CheckOut:yyyy-MM-dd}";
             DataContext = new
             {
-                r.Title,
+                label,
                 CustomerLine = $"Customer: {r.Customer!.Name}",
-                DateRange = $"Dates: {r.StartDate:dd/MM/yyyy} – {r.EndDate:dd/MM/yyyy}",
+                DateRange = $"Dates: {r.CheckIn:dd/MM/yyyy} – {r.CheckOut:dd/MM/yyyy}",
                 DueInfo = $"Deposit: {(r.DepositDueDate?.ToString("dd/MM/yyyy") ?? "n/a")}  |  Balance: {(r.BalanceDueDate?.ToString("dd/MM/yyyy") ?? "n/a")}",
                 Status = $"Status: {r.Status}",
                 r.Notes,

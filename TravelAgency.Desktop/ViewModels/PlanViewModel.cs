@@ -85,38 +85,34 @@ namespace TravelAgency.Desktop.ViewModels
             var artList = allotments.SelectMany(a => a.RoomTypes).ToList();
             var artIds = artList.Select(x => x.Id).ToList();
 
-            var items = await db.ReservationItems
+            var items = await db.ReservationLines
                 .Include(x => x.Reservation)
-                .Where(x => x.AllotmentRoomTypeId != null &&
-                            artIds.Contains(x.AllotmentRoomTypeId.Value) &&
+                .Where(x => artIds.Contains(x.AllotmentRoomTypeId) &&
                             x.Reservation!.Status != ReservationStatus.Cancelled &&
-                            (x.StartDate ?? DateTime.MinValue) < rangeEndEx &&
-                            (x.EndDate ?? DateTime.MaxValue) > rangeStart)
+                            (x.Reservation.CheckIn) < rangeEndEx &&
+                            (x.Reservation.CheckOut) > rangeStart)
                 .AsNoTracking()
                 .ToListAsync();
 
             // per (artId, day) reserved qty
             var dayReserved = new Dictionary<(int artId, DateTime day), int>();
-            var anyPaidArt = new HashSet<int>(
-                items.Where(i => i.IsPaid && i.AllotmentRoomTypeId.HasValue)
-                     .Select(i => i.AllotmentRoomTypeId!.Value));
-
+            var anyPaidArt = new HashSet<int>();
             // cache lookup
             var artById = artList.ToDictionary(rt => rt.Id, rt => rt);
             var allotByArt = artList.ToDictionary(rt => rt.Id, rt => rt.Allotment!);
 
             foreach (var it in items)
             {
-                var artId = it.AllotmentRoomTypeId!.Value;
+                var artId = it.AllotmentRoomTypeId;
                 var allot = allotByArt[artId];
 
-                var s = ((it.StartDate ?? allot.StartDate) < rangeStart ? rangeStart : (it.StartDate ?? allot.StartDate)).Date;
-                var e = ((it.EndDate ?? allot.EndDate) > rangeEndEx ? rangeEndEx : (it.EndDate ?? allot.EndDate)).Date;
+                var s = ((it.Reservation.CheckIn) < rangeStart ? rangeStart : (it.Reservation.CheckIn)).Date;
+                var e = ((it.Reservation.CheckOut) > rangeEndEx ? rangeEndEx : (it.Reservation.CheckOut)).Date;
 
                 for (var d = s; d < e; d = d.AddDays(1))
                 {
                     var key = (artId, d);
-                    dayReserved[key] = dayReserved.TryGetValue(key, out var cur) ? cur + it.Qty : it.Qty;
+                    dayReserved[key] = dayReserved.TryGetValue(key, out var cur) ? cur + it.Quantity : it.Quantity;
                 }
             }
 
@@ -139,12 +135,12 @@ namespace TravelAgency.Desktop.ViewModels
                         }
 
                         dayReserved.TryGetValue((rt.Id, day), out var reservedQty);
-                        var free = Math.Max(0, rt.Quantity  - reservedQty);
+                        var free = Math.Max(0, rt.Quantity - reservedQty);
 
                         PlanCellState state;
                         if (free == 0)
                         {
-                            state = anyPaidArt.Contains(rt.Id) ? PlanCellState.FullPaid : PlanCellState.FullUnpaid;
+                            state = PlanCellState.FullUnpaid; // or just PlanCellState.Full if you have it
                         }
                         else if (a.OptionDueDate.HasValue && a.OptionDueDate.Value.Date < DateTime.Today)
                         {
@@ -156,7 +152,7 @@ namespace TravelAgency.Desktop.ViewModels
                         }
                         else
                         {
-                            state = PlanCellState.FreePaid;
+                            state = PlanCellState.FreePaid; // or PlanCellState.Free
                         }
 
                         row.Cells.Add(new PlanCellVM

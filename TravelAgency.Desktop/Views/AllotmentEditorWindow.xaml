@@ -6,6 +6,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:TravelAgency.Desktop.ViewModels"
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:mah="http://metro.mahapps.com/winfx/xaml/controls"
+        xmlns:conv="clr-namespace:TravelAgency.Desktop.Converters"
         xmlns:enums="clr-namespace:TravelAgency.Domain.Enums;assembly=TravelAgency.Domain"
         mc:Ignorable="d"
         Title="Allotment"
@@ -15,278 +17,290 @@
         Background="White"
         WindowStartupLocation="CenterOwner">
     <Window.Resources>
-        <local:BindingProxy x:Key="VmProxy"
-                            Data="{Binding}" />
+        <conv:BooleanToCursorConverter x:Key="BoolToCursor" />
+        <local:BindingProxy x:Key="VmProxy" Data="{Binding}" />
     </Window.Resources>
-    <DockPanel>
-        <!-- Header / Actions -->
-        <Grid DockPanel.Dock="Top"
-              Margin="12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="8" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding HeaderTitle}"
-                       FontSize="20"
-                       FontWeight="Bold"
-                       VerticalAlignment="Center" />
-            <Button Grid.Column="1"
-                    Content="Save"
-                    Padding="16,6"
-                    Command="{Binding SaveCommand}" />
-            <Button Grid.Column="3"
-                    Content="Cancel"
-                    Padding="16,6"
-                    Command="{Binding CancelCommand}" />
-        </Grid>
-        <TabControl Margin="12">
-            <!-- TAB 1: Main -->
-            <TabItem Header="Main">
-                <Grid Margin="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="420" />
-                        <ColumnDefinition Width="16" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="12" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-                    <!-- Αριστερά: βασικά πεδία -->
-                    <Border Grid.Column="0"
-                            Padding="12"
-                            BorderBrush="#DDD"
-                            BorderThickness="1"
-                            CornerRadius="8">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="100" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="8" />
-                                <RowDefinition Height="Auto" />
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0"
-                                       Grid.Column="0"
-                                       Text="Title"
-                                       VerticalAlignment="Center" />
-                            <TextBox   Grid.Row="0"
-                                       Grid.Column="1"
-                                       Text="{Binding Title, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}" />
-                            <TextBlock Grid.Row="2"
-                                       Grid.Column="0"
-                                       Text="City"
-                                       VerticalAlignment="Center" />
-                            <ComboBox  Grid.Row="2"
-                                       Grid.Column="1"
-                                       ItemsSource="{Binding Cities}"
-                                       SelectedItem="{Binding SelectedCity}"
-                                       DisplayMemberPath="Name"
-                                       IsEditable="False" />
-                            <TextBlock Grid.Row="4"
-                                       Grid.Column="0"
-                                       Text="Hotel"
-                                       VerticalAlignment="Center" />
-                            <ComboBox  Grid.Row="4"
-                                       Grid.Column="1"
-                                       ItemsSource="{Binding FilteredHotels}"
-                                       SelectedItem="{Binding SelectedHotel}"
-                                       DisplayMemberPath="Name"
-                                       IsEditable="False" />
-                            <TextBlock Grid.Row="6"
-                                       Grid.Column="0"
-                                       Text="From"
-                                       VerticalAlignment="Center" />
-                            <DatePicker Grid.Row="6"
-                                        Grid.Column="1"
-                                        SelectedDate="{Binding StartDate, ValidatesOnDataErrors=True}" />
-                            <TextBlock Grid.Row="8"
-                                       Grid.Column="0"
-                                       Text="To"
-                                       VerticalAlignment="Center" />
-                            <DatePicker Grid.Row="8"
-                                        Grid.Column="1"
-                                        SelectedDate="{Binding EndDate, ValidatesOnDataErrors=True}" />
-                            <TextBlock Grid.Row="10"
-                                       Grid.Column="0"
-                                       Text="Date Policy"
-                                       VerticalAlignment="Center" />
-                            <ComboBox Grid.Row="10"
-                                      Grid.Column="1"
-                                      SelectedValue="{Binding AllotmentDatePolicy}"
-                                      SelectedValuePath="Content"
-                                      IsEditable="False">
-                                <ComboBoxItem Content="ExactDates" />
-                                <ComboBoxItem Content="PartialAllowed" />
-                            </ComboBox>
-                            <TextBlock Grid.Row="12"
-                                       Grid.Column="0"
-                                       Text="Option Due"
-                                       VerticalAlignment="Center" />
-                            <DatePicker Grid.Row="12"
-                                        Grid.Column="1"
-                                        SelectedDate="{Binding OptionDueDate}" />
-                        </Grid>
-                    </Border>
-                    <!-- Δεξιά: γραμμές Room Types -->
-                    <DockPanel Grid.Column="2">
+    <Grid>
+        <DockPanel Cursor="{Binding IsBusy, Source={StaticResource BusyState}, Converter={StaticResource BoolToCursor}}">
+            <!-- Header / Actions -->
+            <Grid DockPanel.Dock="Top"
+                  Margin="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="8" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding HeaderTitle}"
+                           FontSize="20"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Content="Save"
+                        Padding="16,6"
+                        Command="{Binding SaveCommand}" />
+                <Button Grid.Column="3"
+                        Content="Cancel"
+                        Padding="16,6"
+                        Command="{Binding CancelCommand}" />
+            </Grid>
+            <TabControl Margin="12">
+                <!-- TAB 1: Main -->
+                <TabItem Header="Main">
+                    <Grid Margin="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="420" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="12" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <!-- Αριστερά: βασικά πεδία -->
+                        <Border Grid.Column="0"
+                                Padding="12"
+                                BorderBrush="#DDD"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="8" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Grid.Row="0"
+                                           Grid.Column="0"
+                                           Text="Title"
+                                           VerticalAlignment="Center" />
+                                <TextBox   Grid.Row="0"
+                                           Grid.Column="1"
+                                           Text="{Binding Title, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True}" />
+                                <TextBlock Grid.Row="2"
+                                           Grid.Column="0"
+                                           Text="City"
+                                           VerticalAlignment="Center" />
+                                <ComboBox  Grid.Row="2"
+                                           Grid.Column="1"
+                                           ItemsSource="{Binding Cities}"
+                                           SelectedItem="{Binding SelectedCity}"
+                                           DisplayMemberPath="Name"
+                                           IsEditable="False" />
+                                <TextBlock Grid.Row="4"
+                                           Grid.Column="0"
+                                           Text="Hotel"
+                                           VerticalAlignment="Center" />
+                                <ComboBox  Grid.Row="4"
+                                           Grid.Column="1"
+                                           ItemsSource="{Binding FilteredHotels}"
+                                           SelectedItem="{Binding SelectedHotel}"
+                                           DisplayMemberPath="Name"
+                                           IsEditable="False" />
+                                <TextBlock Grid.Row="6"
+                                           Grid.Column="0"
+                                           Text="From"
+                                           VerticalAlignment="Center" />
+                                <DatePicker Grid.Row="6"
+                                            Grid.Column="1"
+                                            SelectedDate="{Binding StartDate, ValidatesOnDataErrors=True}" />
+                                <TextBlock Grid.Row="8"
+                                           Grid.Column="0"
+                                           Text="To"
+                                           VerticalAlignment="Center" />
+                                <DatePicker Grid.Row="8"
+                                            Grid.Column="1"
+                                            SelectedDate="{Binding EndDate, ValidatesOnDataErrors=True}" />
+                                <TextBlock Grid.Row="10"
+                                           Grid.Column="0"
+                                           Text="Date Policy"
+                                           VerticalAlignment="Center" />
+                                <ComboBox Grid.Row="10"
+                                          Grid.Column="1"
+                                          SelectedValue="{Binding AllotmentDatePolicy}"
+                                          SelectedValuePath="Content"
+                                          IsEditable="False">
+                                    <ComboBoxItem Content="ExactDates" />
+                                    <ComboBoxItem Content="PartialAllowed" />
+                                </ComboBox>
+                                <TextBlock Grid.Row="12"
+                                           Grid.Column="0"
+                                           Text="Option Due"
+                                           VerticalAlignment="Center" />
+                                <DatePicker Grid.Row="12"
+                                            Grid.Column="1"
+                                            SelectedDate="{Binding OptionDueDate}" />
+                            </Grid>
+                        </Border>
+                        <!-- Δεξιά: γραμμές Room Types -->
+                        <DockPanel Grid.Column="2">
+                            <ToolBar DockPanel.Dock="Top">
+                                <Button Content="Add Line"
+                                        Command="{Binding AddLineCommand}" />
+                                <Button Content="Remove"
+                                        Margin="8,0,0,0"
+                                        Command="{Binding RemoveSelectedLineCommand}" />
+                                <Separator />
+                                <TextBlock Text="Nights:"
+                                           Margin="8,0,4,0"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Nights}"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center" />
+                            </ToolBar>
+                            <DataGrid ItemsSource="{Binding Lines}"
+                                      SelectedItem="{Binding SelectedLine}"
+                                      AutoGenerateColumns="False"
+                                      CanUserAddRows="False"
+                                      Margin="0,8,0,0">
+                                <DataGrid.Columns>
+                                    <DataGridComboBoxColumn Header="Room Type"
+                                                            Width="220"
+                                                            ItemsSource="{Binding Data.RoomTypes, Source={StaticResource VmProxy}}"
+                                                            DisplayMemberPath="Name"
+                                                            SelectedValuePath="Id"
+                                                            SelectedValueBinding="{Binding RoomTypeId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <DataGridTextColumn Header="Qty"
+                                                        Width="80"
+                                                        Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0}}" />
+                                    <DataGridTextColumn Header="Price/Night"
+                                                        Width="120"
+                                                        Binding="{Binding PricePerNight, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}}" />
+                                    <DataGridTextColumn Header="Notes"
+                                                        MinWidth="80"
+                                                        Width="*"
+                                                        Binding="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
+                                    <DataGridTextColumn Header="Line Total"
+                                                        Width="120"
+                                                        IsReadOnly="True"
+                                                        Binding="{Binding LineTotal, StringFormat={}{0:0.##}}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </DockPanel>
+                        <!-- Totals -->
+                        <Border Grid.Row="2"
+                                Grid.ColumnSpan="3"
+                                Padding="12"
+                                BorderBrush="#DDD"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Right">
+                                <StackPanel>
+                                    <TextBlock Text="Base Cost" />
+                                    <TextBlock Text="{Binding BaseCost, StringFormat={}{0:0.##}}"
+                                               FontWeight="Bold" />
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="Paid Total" />
+                                    <TextBlock Text="{Binding PaidTotal, StringFormat={}{0:0.##}}"
+                                               FontWeight="Bold" />
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="Balance" />
+                                    <TextBlock Text="{Binding Balance, StringFormat={}{0:0.##}}"
+                                               FontWeight="Bold" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </TabItem>
+                <!-- TAB 2: Payments -->
+                <TabItem Header="Payments">
+                    <DockPanel Margin="8">
                         <ToolBar DockPanel.Dock="Top">
-                            <Button Content="Add Line"
-                                    Command="{Binding AddLineCommand}" />
+                            <Button Content="Add Payment"
+                                    Command="{Binding AddPaymentCommand}" />
                             <Button Content="Remove"
                                     Margin="8,0,0,0"
-                                    Command="{Binding RemoveSelectedLineCommand}" />
-                            <Separator />
-                            <TextBlock Text="Nights:"
-                                       Margin="8,0,4,0"
-                                       VerticalAlignment="Center" />
-                            <TextBlock Text="{Binding Nights}"
-                                       FontWeight="SemiBold"
-                                       VerticalAlignment="Center" />
+                                    Command="{Binding RemoveSelectedPaymentCommand}" />
                         </ToolBar>
-                        <DataGrid ItemsSource="{Binding Lines}"
-                                  SelectedItem="{Binding SelectedLine}"
+                        <DataGrid ItemsSource="{Binding Payments}"
+                                  SelectedItem="{Binding SelectedPayment}"
                                   AutoGenerateColumns="False"
                                   CanUserAddRows="False"
                                   Margin="0,8,0,0">
                             <DataGrid.Columns>
-                                <DataGridComboBoxColumn Header="Room Type"
-                                                        Width="220"
-                                                        ItemsSource="{Binding Data.RoomTypes, Source={StaticResource VmProxy}}"
-                                                        DisplayMemberPath="Name"
-                                                        SelectedValuePath="Id"
-                                                        SelectedValueBinding="{Binding RoomTypeId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                                <DataGridTextColumn Header="Qty"
-                                                    Width="80"
-                                                    Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0}}" />
-                                <DataGridTextColumn Header="Price/Night"
-                                                    Width="120"
-                                                    Binding="{Binding PricePerNight, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}}" />
-                                   <DataGridTextColumn Header="Notes"
-                                                    MinWidth="80"
+                                <DataGridTextColumn Header="Date"
+                                                    Width="140"
+                                                    Binding="{Binding Date, StringFormat=\{0:yyyy-MM-dd\}, UpdateSourceTrigger=PropertyChanged}" />
+                                <DataGridTextColumn Header="Title"
+                                                    Width="*"
+                                                    Binding="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
+                                <DataGridTextColumn Header="Kind"
+                                                    Width="130"
+                                                    Binding="{Binding Kind, UpdateSourceTrigger=PropertyChanged}" />
+                                <DataGridTextColumn Header="Amount"
+                                                    Width="130"
+                                                    Binding="{Binding Amount, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}}" />
+                                <DataGridTextColumn Header="Notes"
                                                     Width="*"
                                                     Binding="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
-                                <DataGridTextColumn Header="Line Total"
-                                                    Width="120"
-                                                    IsReadOnly="True"
-                                                    Binding="{Binding LineTotal, StringFormat={}{0:0.##}}" />
+                                <DataGridCheckBoxColumn Header="Voided"
+                                                        Width="90"
+                                                        Binding="{Binding IsVoided, UpdateSourceTrigger=PropertyChanged}" />
+                                <DataGridTextColumn Header="Updated"
+                                                    Width="170"
+                                                    Binding="{Binding UpdatedAtLocal, StringFormat=\{0:yyyy-MM-dd HH:mm\}}" />
                             </DataGrid.Columns>
                         </DataGrid>
                     </DockPanel>
-                    <!-- Totals -->
-                    <Border Grid.Row="2"
-                            Grid.ColumnSpan="3"
-                            Padding="12"
-                            BorderBrush="#DDD"
-                            BorderThickness="1"
-                            CornerRadius="8">
-                        <StackPanel Orientation="Horizontal"
-                                    HorizontalAlignment="Right"
-                                     >
-                            <StackPanel>
-                                <TextBlock Text="Base Cost" />
-                                <TextBlock Text="{Binding BaseCost, StringFormat={}{0:0.##}}"
-                                           FontWeight="Bold" />
-                            </StackPanel>
-                            <StackPanel>
-                                <TextBlock Text="Paid Total" />
-                                <TextBlock Text="{Binding PaidTotal, StringFormat={}{0:0.##}}"
-                                           FontWeight="Bold" />
-                            </StackPanel>
-                            <StackPanel>
-                                <TextBlock Text="Balance" />
-                                <TextBlock Text="{Binding Balance, StringFormat={}{0:0.##}}"
-                                           FontWeight="Bold" />
-                            </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </Grid>
-            </TabItem>
-            <!-- TAB 2: Payments -->
-            <TabItem Header="Payments">
-                <DockPanel Margin="8">
-                    <ToolBar DockPanel.Dock="Top">
-                        <Button Content="Add Payment"
-                                Command="{Binding AddPaymentCommand}" />
-                        <Button Content="Remove"
-                                Margin="8,0,0,0"
-                                Command="{Binding RemoveSelectedPaymentCommand}" />
-                    </ToolBar>
-                    <DataGrid ItemsSource="{Binding Payments}"
-                              SelectedItem="{Binding SelectedPayment}"
+                </TabItem>
+                <!-- TAB 3: History -->
+                <TabItem Header="History">
+                    <DataGrid Margin="8"
+                              ItemsSource="{Binding History}"
                               AutoGenerateColumns="False"
-                              CanUserAddRows="False"
-                              Margin="0,8,0,0">
+                              CanUserAddRows="False">
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date"
-                                                Width="140"
-                                                Binding="{Binding Date, StringFormat=\{0:yyyy-MM-dd\}, UpdateSourceTrigger=PropertyChanged}" />
-                            <DataGridTextColumn Header="Title"
-                                                Width="*"
-                                                Binding="{Binding Title, UpdateSourceTrigger=PropertyChanged}" />
-                            <DataGridTextColumn Header="Kind"
-                                                Width="130"
-                                                Binding="{Binding Kind, UpdateSourceTrigger=PropertyChanged}" />
-                            <DataGridTextColumn Header="Amount"
-                                                Width="130"
-                                                Binding="{Binding Amount, UpdateSourceTrigger=PropertyChanged, StringFormat={}{0:0.##}}" />
-                               <DataGridTextColumn Header="Notes"
-                                                Width="*"
-                                                Binding="{Binding Notes, UpdateSourceTrigger=PropertyChanged}" />
-                            <DataGridCheckBoxColumn Header="Voided"
-                                                    Width="90"
-                                                    Binding="{Binding IsVoided, UpdateSourceTrigger=PropertyChanged}" />
-                            <DataGridTextColumn Header="Updated"
+                            <DataGridTextColumn Header="When"
                                                 Width="170"
-                                                Binding="{Binding UpdatedAtLocal, StringFormat=\{0:yyyy-MM-dd HH:mm\}}" />
+                                                Binding="{Binding ChangedAtLocal, StringFormat=\{0:yyyy-MM-dd HH:mm\}}" />
+                            <DataGridTextColumn Header="By"
+                                                Width="120"
+                                                Binding="{Binding ChangedBy}" />
+                            <DataGridTextColumn Header="Entity"
+                                                Width="140"
+                                                Binding="{Binding EntityName}" />
+                            <!-- was EntityType -->
+                            <DataGridTextColumn Header="Property"
+                                                Width="140"
+                                                Binding="{Binding PropertyName}" />
+                            <DataGridTextColumn Header="Old"
+                                                Width="*"
+                                                Binding="{Binding OldValue}" />
+                            <DataGridTextColumn Header="New"
+                                                Width="*"
+                                                Binding="{Binding NewValue}" />
                         </DataGrid.Columns>
                     </DataGrid>
-                </DockPanel>
-            </TabItem>
-            <!-- TAB 3: History -->
-            <TabItem Header="History">
-                <DataGrid Margin="8"
-                          ItemsSource="{Binding History}"
-                          AutoGenerateColumns="False"
-                          CanUserAddRows="False">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="When"
-                                            Width="170"
-                                            Binding="{Binding ChangedAtLocal, StringFormat=\{0:yyyy-MM-dd HH:mm\}}" />
-                        <DataGridTextColumn Header="By"
-                                            Width="120"
-                                            Binding="{Binding ChangedBy}" />
-                        <DataGridTextColumn Header="Entity"
-                                            Width="140"
-                                            Binding="{Binding EntityName}" />
-                        <!-- was EntityType -->
-                        <DataGridTextColumn Header="Property"
-                                            Width="140"
-                                            Binding="{Binding PropertyName}" />
-                        <DataGridTextColumn Header="Old"
-                                            Width="*"
-                                            Binding="{Binding OldValue}" />
-                        <DataGridTextColumn Header="New"
-                                            Width="*"
-                                            Binding="{Binding NewValue}" />
-                    </DataGrid.Columns>
-                </DataGrid>
-            </TabItem>
-        </TabControl>
-    </DockPanel>
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+        <!-- Busy overlay always on top -->
+        <Grid Background="#66000000"
+              Visibility="{Binding IsBusy, Source={StaticResource BusyState}, Converter={StaticResource BoolToCursor}}"
+              IsHitTestVisible="True"
+              Panel.ZIndex="9999">
+            <mah:ProgressRing IsActive="True"
+                              Width="64"
+                              Height="64"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" />
+        </Grid>
+    </Grid>
 </Window>

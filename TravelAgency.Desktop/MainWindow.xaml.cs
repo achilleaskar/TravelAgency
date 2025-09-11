@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Windows;
-using TravelAgency.Desktop.ViewModels;
 
 namespace TravelAgency.Desktop;
 

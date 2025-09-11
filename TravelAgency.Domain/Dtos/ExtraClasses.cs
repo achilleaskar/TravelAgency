@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TravelAgency.Domain.Dtos
+﻿namespace TravelAgency.Domain.Dtos
 {
     // Lightweight DTOs (service-side)
     public class CityVM { public int Id { get; set; } public string Name { get; set; } = ""; }
@@ -69,10 +63,13 @@ namespace TravelAgency.Domain.Dtos
         public string? NewValue { get; set; }
     }
 
-    public class SaveResult
+    public sealed class SaveResult
     {
         public bool Success { get; set; }
-        public int Id { get; set; }
-        public List<HistoryDto> History { get; set; } = new();
+        public int? Id { get; set; }
+        public string? Message { get; set; }
+
+        // Add this so editors can refresh history without a second fetch
+        public List<HistoryDto>? History { get; set; }
     }
 }

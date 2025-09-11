@@ -1,17 +1,13 @@
 ﻿// Desktop/ViewModels/AllotmentEditorViewModel.cs
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using System.Windows.Input;
 using Microsoft.EntityFrameworkCore; // kept for future use; not required by this VM now
 using TravelAgency.Data;            // kept so the existing window ctor signature compiles
+using TravelAgency.Desktop.Helpers;
 using TravelAgency.Domain.Dtos;     // AllotmentDto, AllotmentLineDto, PaymentDto, HistoryDto
-using TravelAgency.Domain.Enums;    // AllotmentDatePolicy, PaymentKind, AllotmentStatus
 using TravelAgency.Services;        // IAllotmentService, CityVM, HotelVM, RoomTypeVM
 
 namespace TravelAgency.Desktop.ViewModels
@@ -171,114 +167,122 @@ namespace TravelAgency.Desktop.ViewModels
 
         public async Task InitializeAsNewAsync()
         {
-            _isNew = true;
-            _allotmentId = null;
+            using (Busy.Begin())
+            {
+                _isNew = true;
+                _allotmentId = null;
 
-            await LoadLookupsAsync();
+                await LoadLookupsAsync();
 
-            Title = string.Empty;
-            SelectedCity = Cities.FirstOrDefault();
-            ApplyHotelFilter();
-            SelectedHotel = null;
+                Title = string.Empty;
+                SelectedCity = Cities.FirstOrDefault();
+                ApplyHotelFilter();
+                SelectedHotel = null;
 
-            StartDate = DateTime.Today;
-            EndDate = DateTime.Today.AddDays(1);
-            OptionDueDate = null;
-            AllotmentDatePolicy = "ExactDates";
+                StartDate = DateTime.Today;
+                EndDate = DateTime.Today.AddDays(1);
+                OptionDueDate = null;
+                AllotmentDatePolicy = "ExactDates";
 
-            Lines.Clear();
-            Payments.Clear();
-            History.Clear();
+                Lines.Clear();
+                Payments.Clear();
+                History.Clear();
 
-            _isDirty = false;
-            RaiseAll();
+                _isDirty = false;
+                RaiseAll();
+            }
         }
+
 
         public async Task InitializeForEditAsync(int id)
         {
-            _isNew = false; _allotmentId = id;
-
-            await LoadLookupsAsync();
-
-            // Load via service (no EF in VM)
-            var dto = await _svc.LoadAsync(id);
-
-            Title = dto.Title;
-
-            SelectedCity = Cities.FirstOrDefault(c => c.Id == dto.CityId);
-            ApplyHotelFilter();
-            SelectedHotel = FilteredHotels.FirstOrDefault(h => h.Id == dto.HotelId);
-
-            StartDate = dto.StartDateUtc.ToLocalTime().Date;
-            EndDate = dto.EndDateUtc.ToLocalTime().Date;
-            OptionDueDate = dto.OptionDueUtc?.ToLocalTime().Date;
-            AllotmentDatePolicy = dto.AllotmentDatePolicy; // "ExactDates" | "PartialAllowed"
-
-            Lines.Clear();
-            foreach (var l in dto.Lines)
+            using (Busy.Begin())
             {
-                var vm = new AllotmentLineVM
+                _isNew = false;
+                _allotmentId = id;
+
+                await LoadLookupsAsync();
+
+                var dto = await _svc.LoadAsync(id);
+
+                Title = dto.Title;
+
+                SelectedCity = Cities.FirstOrDefault(c => c.Id == dto.CityId);
+                ApplyHotelFilter();
+                SelectedHotel = FilteredHotels.FirstOrDefault(h => h.Id == dto.HotelId);
+
+                StartDate = dto.StartDateUtc.ToLocalTime().Date;
+                EndDate = dto.EndDateUtc.ToLocalTime().Date;
+                OptionDueDate = dto.OptionDueUtc?.ToLocalTime().Date;
+                AllotmentDatePolicy = dto.AllotmentDatePolicy;
+
+                Lines.Clear();
+                foreach (var l in dto.Lines)
                 {
-                    Id = l.Id,
-                    RoomType = RoomTypes.FirstOrDefault(r => r.Id == l.RoomTypeId),
-                    Quantity = l.Quantity,
-                    PricePerNight = l.PricePerNight,
-                    Notes = l.Notes
-                };
-                HookLine(vm);
-                Lines.Add(vm);
-            }
+                    var vm = new AllotmentLineVM
+                    {
+                        Id = l.Id,
+                        RoomType = RoomTypes.FirstOrDefault(r => r.Id == l.RoomTypeId),
+                        Quantity = l.Quantity,
+                        PricePerNight = l.PricePerNight,
+                        Notes = l.Notes
+                    };
+                    HookLine(vm);
+                    Lines.Add(vm);
+                }
 
-            Payments.Clear();
-            foreach (var p in dto.Payments.OrderBy(p => p.DateUtc))
-            {
-                var vm = new PaymentVM
+                Payments.Clear();
+                foreach (var p in dto.Payments.OrderBy(p => p.DateUtc))
                 {
-                    Id = p.Id,
-                    Date = p.DateUtc.ToLocalTime().Date,
-                    Title = p.Title,
-                    Kind = p.Kind,
-                    Amount = p.Amount,
-                    Notes = p.Notes,
-                    IsVoided = p.IsVoided,
-                    UpdatedAtLocal = p.UpdatedAtUtc?.ToLocalTime()   // <-- NEW
-                };
-                HookPayment(vm);          // <-- add this
-                Payments.Add(vm);
-            }
+                    var vm = new PaymentVM
+                    {
+                        Id = p.Id,
+                        Date = p.DateUtc.ToLocalTime().Date,
+                        Title = p.Title,
+                        Kind = p.Kind,
+                        Amount = p.Amount,
+                        Notes = p.Notes,
+                        IsVoided = p.IsVoided,
+                        UpdatedAtLocal = p.UpdatedAtUtc?.ToLocalTime()
+                    };
+                    HookPayment(vm);
+                    Payments.Add(vm);
+                }
 
-
-            History.Clear();
-            foreach (var h in dto.History.OrderByDescending(x => x.ChangedAtUtc))
-            {
-                History.Add(new UpdateLogVM
+                History.Clear();
+                foreach (var h in dto.History.OrderByDescending(x => x.ChangedAtUtc))
                 {
-                    ChangedAtUtc = h.ChangedAtUtc,
-                    ChangedBy = h.ChangedBy,
-                    EntityName = h.EntityName,      // correct name
-                    PropertyName = h.PropertyName,  // correct name
-                    OldValue = h.OldValue,
-                    NewValue = h.NewValue
-                });
-            }
+                    History.Add(new UpdateLogVM
+                    {
+                        ChangedAtUtc = h.ChangedAtUtc,
+                        ChangedBy = h.ChangedBy,
+                        EntityName = h.EntityName,
+                        PropertyName = h.PropertyName,
+                        OldValue = h.OldValue,
+                        NewValue = h.NewValue
+                    });
+                }
 
-            _isDirty = false;
-            RecalcTotals();
-            RaiseAll();
+                _isDirty = false;
+                RecalcTotals();
+                RaiseAll();
+            }
         }
+
 
         private async Task LoadLookupsAsync()
         {
-            Cities.Clear();
-            Hotels.Clear();
-            RoomTypes.Clear();
+                Cities.Clear();
+                Hotels.Clear();
+                RoomTypes.Clear();
 
-            var (cities, hotels, roomTypes) = await _svc.LoadLookupsAsync();
+                var (cities, hotels, roomTypes) = await _svc.LoadLookupsAsync();
 
-            foreach (var c in cities) Cities.Add(c);
-            foreach (var h in hotels) Hotels.Add(h);
-            foreach (var r in roomTypes) RoomTypes.Add(r);
+                foreach (var c in cities) Cities.Add(c);
+                foreach (var h in hotels) Hotels.Add(h);
+                foreach (var r in roomTypes) RoomTypes.Add(r);
         }
+
 
         #endregion
 
@@ -365,70 +369,70 @@ namespace TravelAgency.Desktop.ViewModels
             ValidateLines();
             if (!CanSave) return;
 
-            // Build the domain DTO and delegate to service
-            var dto = new AllotmentDto
+            using (Busy.Begin())
             {
-                Id = _allotmentId,
-                Title = Title,
-                CityId = SelectedCity!.Id,      // for UI filtering
-                HotelId = SelectedHotel!.Id,
-                StartDateUtc = (StartDate ?? DateTime.Today).ToUniversalTime(),
-                EndDateUtc = (EndDate ?? DateTime.Today).ToUniversalTime(),
-                OptionDueUtc = OptionDueDate?.ToUniversalTime(),
-                AllotmentDatePolicy = AllotmentDatePolicy, // "ExactDates" | "PartialAllowed"
-                Lines = Lines.Select(l => new AllotmentLineDto
+                var dto = new AllotmentDto
                 {
-                    Id = l.Id,
-                    RoomTypeId = l.RoomType?.Id ?? 0,
-                    Quantity = l.Quantity,
-                    PricePerNight = l.PricePerNight,
-                    Notes = l.Notes
-                }).ToList(),
-                Payments = Payments.Select(p => new PaymentDto
-                {
-                    Id=p.Id,
-                    DateUtc = p.Date.ToUniversalTime(),
-                    Title = p.Title,
-                    Kind = p.Kind,
-                    Amount = p.Amount,
-                    Notes = p.Notes,
-                    IsVoided = p.IsVoided
-                }).ToList()
-            };
-
-            var result = await _svc.SaveAsync(dto);
-            if (!result.Success) return;
-
-            _allotmentId = result.Id;
-            _isNew = false;
-
-            // refresh history if returned
-            if (result.History?.Count > 0)
-            {
-                History.Clear();
-                foreach (var h in result.History.OrderByDescending(x => x.ChangedAtUtc))
-                {
-                    History.Add(new UpdateLogVM
+                    Id = _allotmentId,
+                    Title = Title,
+                    CityId = SelectedCity!.Id,
+                    HotelId = SelectedHotel!.Id,
+                    StartDateUtc = (StartDate ?? DateTime.Today).ToUniversalTime(),
+                    EndDateUtc = (EndDate ?? DateTime.Today).ToUniversalTime(),
+                    OptionDueUtc = OptionDueDate?.ToUniversalTime(),
+                    AllotmentDatePolicy = AllotmentDatePolicy,
+                    Lines = Lines.Select(l => new AllotmentLineDto
                     {
-                        ChangedAtUtc = h.ChangedAtUtc,
-                        ChangedBy = h.ChangedBy,
-                        EntityName = h.EntityName,
-                        PropertyName = h.PropertyName,
-                        OldValue = h.OldValue,
-                        NewValue = h.NewValue
-                    });
+                        Id = l.Id,
+                        RoomTypeId = l.RoomType?.Id ?? 0,
+                        Quantity = l.Quantity,
+                        PricePerNight = l.PricePerNight,
+                        Notes = l.Notes
+                    }).ToList(),
+                    Payments = Payments.Select(p => new PaymentDto
+                    {
+                        Id = p.Id,
+                        DateUtc = p.Date.ToUniversalTime(),
+                        Title = p.Title,
+                        Kind = p.Kind,
+                        Amount = p.Amount,
+                        Notes = p.Notes,
+                        IsVoided = p.IsVoided
+                    }).ToList()
+                };
+
+                var result = await _svc.SaveAsync(dto);
+                if (!result.Success) return;
+
+                _allotmentId = result.Id;
+                _isNew = false;
+
+                if (result.History?.Count > 0)
+                {
+                    History.Clear();
+                    foreach (var h in result.History.OrderByDescending(x => x.ChangedAtUtc))
+                    {
+                        History.Add(new UpdateLogVM
+                        {
+                            ChangedAtUtc = h.ChangedAtUtc,
+                            ChangedBy = h.ChangedBy,
+                            EntityName = h.EntityName,
+                            PropertyName = h.PropertyName,
+                            OldValue = h.OldValue,
+                            NewValue = h.NewValue
+                        });
+                    }
                 }
+
+                RecalcTotals();
+                _isDirty = false;
+                OnPropertyChanged(nameof(HeaderTitle));
+                RaiseCanExec();
+
+                CloseRequested?.Invoke(true);
             }
-
-            // recompute totals locally from current Lines/Payments
-            RecalcTotals();
-
-            _isDirty = false;
-            OnPropertyChanged(nameof(HeaderTitle));
-            RaiseCanExec();
-
-            CloseRequested?.Invoke(true);
         }
+
 
         #endregion
 

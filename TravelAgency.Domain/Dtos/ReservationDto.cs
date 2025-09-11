@@ -1,16 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TravelAgency.Domain.Dtos
+﻿namespace TravelAgency.Domain.Dtos
 {
     public sealed class ReservationDto
     {
         public int? Id { get; set; }
         public int CustomerId { get; set; }
-        public int HotelId { get; set; }
         public DateTime CheckInUtc { get; set; }
         public DateTime CheckOutUtc { get; set; }
 
@@ -22,7 +15,10 @@ namespace TravelAgency.Domain.Dtos
     public sealed class ReservationLineDto
     {
         public int? Id { get; set; }
-        public int RoomTypeId { get; set; }
+
+        // <-- IMPORTANT: consume concrete allotment line
+        public int AllotmentRoomTypeId { get; set; }
+
         public int Quantity { get; set; }
         public decimal PricePerNight { get; set; }
         public string? Notes { get; set; }
